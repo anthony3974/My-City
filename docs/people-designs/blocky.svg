@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400"><rect width="200" height="400" fill="#fff"/><g transform="translate(0 0)">
+<rect width="200" height="340" rx="12" fill="#eef1f4"/>
+<rect y="300" width="200" height="40" fill="#c9ccd1"/>
+<rect y="300" width="200" height="3" fill="#b0b4ba"/>
+
+<ellipse cx="100" cy="300" rx="44" ry="7" fill="#000" opacity="0.18"/>
+<rect x="74" y="222" width="22" height="78" fill="#22252b"/>
+<rect x="104" y="222" width="22" height="78" fill="#22252b"/>
+<rect x="66" y="122" width="68" height="104" fill="#6b3f8f"/>
+<rect x="66" y="122" width="20" height="104" fill="#fff" opacity="0.12"/>
+<rect x="46" y="126" width="18" height="86" fill="#6b3f8f"/>
+<rect x="136" y="126" width="18" height="86" fill="#6b3f8f"/>
+<rect x="72" y="62" width="56" height="56" fill="#e0b48a"/>
+<rect x="72" y="62" width="16" height="56" fill="#fff" opacity="0.15"/>
+<rect x="84" y="84" width="7" height="7" fill="#1a1a1a"/>
+<rect x="109" y="84" width="7" height="7" fill="#1a1a1a"/>
+
+</g>
+<text x="100.0" y="366" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="bold" fill="#222">Blocky</text>
+<text x="100.0" y="386" text-anchor="middle" font-family="sans-serif" font-size="12.5" fill="#555">6 cubes</text></svg>

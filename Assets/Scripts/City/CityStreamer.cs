@@ -44,6 +44,9 @@ public class CityStreamer : MonoBehaviour
         public bool failed;
     }
 
+    /// <summary>Fired after everything moved back towards the origin; the argument is how far it moved.</summary>
+    public event System.Action<Vector3> OriginShifted;
+
     readonly Dictionary<Vector2Int, Tile> tiles = new();
     readonly List<Vector2Int> scratch = new();
     readonly Stopwatch watch = new();
@@ -299,6 +302,7 @@ public class CityStreamer : MonoBehaviour
         if (carBody) carBody.position += delta;
         if (followCamera) followCamera.Shift(delta);
         Physics.SyncTransforms();
+        OriginShifted?.Invoke(delta);
 
         if (LogStats) Debug.Log($"CITY origin shifted by {delta}, origin cell now {originCell}");
     }

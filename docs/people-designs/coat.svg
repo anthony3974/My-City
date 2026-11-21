@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400"><rect width="200" height="400" fill="#fff"/><g transform="translate(0 0)">
+<rect width="200" height="340" rx="12" fill="#eef1f4"/>
+<rect y="300" width="200" height="40" fill="#c9ccd1"/>
+<rect y="300" width="200" height="3" fill="#b0b4ba"/>
+
+<ellipse cx="100" cy="300" rx="52" ry="7" fill="#000" opacity="0.18"/>
+<path d="M 82 118 L 118 118 L 150 300 L 50 300 Z" fill="#d9d6cf"/>
+<path d="M 82 118 L 96 118 L 74 300 L 50 300 Z" fill="#fff" opacity="0.2"/>
+<line x1="100" y1="126" x2="100" y2="296" stroke="#b8b4ab" stroke-width="3"/>
+<circle cx="100" cy="88" r="27" fill="#e0b48a"/>
+<ellipse cx="90.55" cy="78.55" rx="9.45" ry="8.1" fill="#fff" opacity="0.18"/>
+<circle cx="91" cy="92" r="3.2" fill="#1a1a1a"/><circle cx="109" cy="92" r="3.2" fill="#1a1a1a"/>
+<ellipse cx="100" cy="70" rx="40" ry="8" fill="#5a3b26"/>
+<rect x="78" y="40" width="44" height="30" rx="6" fill="#5a3b26"/>
+<rect x="78" y="58" width="44" height="6" fill="#22252b"/>
+
+</g>
+<text x="100.0" y="366" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="bold" fill="#222">Long coat</text>
+<text x="100.0" y="386" text-anchor="middle" font-family="sans-serif" font-size="12.5" fill="#555">cone + sphere + 2 flat cylinders</text></svg>

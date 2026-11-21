@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400"><rect width="200" height="400" fill="#fff"/><g transform="translate(0 0)">
+<rect width="200" height="340" rx="12" fill="#eef1f4"/>
+<rect y="300" width="200" height="40" fill="#c9ccd1"/>
+<rect y="300" width="200" height="3" fill="#b0b4ba"/>
+
+<ellipse cx="100" cy="300" rx="40" ry="7" fill="#000" opacity="0.18"/>
+<ellipse cx="100" cy="205" rx="44" ry="95" fill="#b3302e"/>
+<ellipse cx="84.6" cy="171.75" rx="15.399999999999999" ry="28.5" fill="#fff" opacity="0.18"/>
+<circle cx="100" cy="82" r="30" fill="#e0b48a"/>
+<ellipse cx="89.5" cy="71.5" rx="10.5" ry="9.0" fill="#fff" opacity="0.18"/>
+<circle cx="91" cy="80" r="3.2" fill="#1a1a1a"/><circle cx="109" cy="80" r="3.2" fill="#1a1a1a"/>
+
+</g>
+<text x="100.0" y="366" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="bold" fill="#222">Bean + head</text>
+<text x="100.0" y="386" text-anchor="middle" font-family="sans-serif" font-size="12.5" fill="#555">2 spheres</text></svg>

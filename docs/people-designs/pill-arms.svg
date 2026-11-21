@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400"><rect width="200" height="400" fill="#fff"/><g transform="translate(0 0)">
+<rect width="200" height="340" rx="12" fill="#eef1f4"/>
+<rect y="300" width="200" height="40" fill="#c9ccd1"/>
+<rect y="300" width="200" height="3" fill="#b0b4ba"/>
+
+<ellipse cx="100" cy="300" rx="42" ry="7" fill="#000" opacity="0.18"/>
+<rect x="62" y="112" width="76" height="188" rx="38" fill="#3c8a4e"/>
+<ellipse cx="86.7" cy="168.5" rx="13.299999999999999" ry="27.0" fill="#fff" opacity="0.18"/>
+<rect x="44" y="128" width="20" height="96" rx="10" fill="#3c8a4e" transform="rotate(8 54 128)"/>
+<rect x="136" y="128" width="20" height="96" rx="10" fill="#3c8a4e" transform="rotate(-8 146 128)"/>
+<circle cx="100" cy="84" r="28" fill="#e0b48a"/>
+<ellipse cx="90.2" cy="74.2" rx="9.799999999999999" ry="8.4" fill="#fff" opacity="0.18"/>
+<circle cx="91" cy="82" r="3.2" fill="#1a1a1a"/><circle cx="109" cy="82" r="3.2" fill="#1a1a1a"/>
+
+</g>
+<text x="100.0" y="366" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="bold" fill="#222">Pill with arms</text>
+<text x="100.0" y="386" text-anchor="middle" font-family="sans-serif" font-size="12.5" fill="#555">3 capsules + 1 sphere</text></svg>
