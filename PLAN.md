@@ -19,17 +19,18 @@
 
 ## Polish
 10. **App icon.** It still uses Unity's default.
-10b. **Plus-sign wheels.** Two crossed spokes ("+") on each wheel instead of the single bar, so the spin reads better (taxi in `PlayerCar.cs`, maybe traffic too).
-11. **Car choice or paint colour**, and a pause and settings menu (graphics quality, touch layout).
-12. **Tilt steering** as an option on phones.
+11. **Plus-sign wheels.** Two crossed spokes ("+") on each wheel instead of the single bar, so the spin reads better (taxi in `PlayerCar.cs`, maybe traffic too).
+12. **Car choice or paint colour**, and a pause and settings menu (graphics quality, touch layout).
+13. **Tilt steering** as an option on phones.
+14. **Visible traffic lights.** The traffic already obeys lights; they just aren't drawn.
 
 ## Progression
-13. **Slower starting car.** Lower the base top speed and acceleration so there is room to grow.
-14. **Less grip in corners at the start.** The car turns too easily now; start with weaker cornering so better handling is something you earn.
-15. **Upgrades bought with taxi money.** Speed (top speed, acceleration), brakes (brake force) and handling (grip, steering), each in a few levels with rising prices, saved in `PlayerPrefs`.
+15. **Slower starting car.** Lower the base top speed and acceleration so there is room to grow.
+16. **Less grip in corners at the start.** The car turns too easily now; start with weaker cornering so better handling is something you earn.
+17. **Upgrades bought with taxi money.** Speed (top speed, acceleration), brakes (brake force) and handling (grip, steering), each in a few levels with rising prices, saved in `PlayerPrefs`.
 
 ## Done
 Crash feedback (1), HUD dial and minimap (2), taxi fares (4), AI traffic (7).
 
 ## Suggested order
-Progression (13–15), then checkpoint runs.
+Progression (15–17), then checkpoint runs.

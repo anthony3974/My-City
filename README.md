@@ -1,6 +1,6 @@
 # My City
 
-An endless, randomly generated city you can drive through forever, with textured brick, stone, office and glass buildings, a drivable car and a third-person camera. Runs on PC (keyboard, mouse, gamepad) and Android (on-screen touch buttons). Published on the F-Droid repo as `com.Tony3974.MyCity`.
+An endless, randomly generated city you can drive through forever, with textured brick, stone, office and glass buildings. You drive a taxi: pick up fares, drop them off and earn money, among AI traffic and people on the sidewalks. Runs on PC (keyboard, mouse, gamepad) and Android (on-screen touch buttons). Published on the F-Droid repo as `com.Tony3974.MyCity`.
 
 ## Tools and versions
 
@@ -23,7 +23,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
   - The grid only moves after the car is 30 m into a new tile (`recenterMargin`), so driving along a border doesn't load and unload tiles over and over.
   - When the car gets 4 km from (0,0,0), everything moves back by whole tiles (`originShiftDistance`). Without this, floats lose precision and the car starts to shake.
   - A big flat ground follows the car under the city, so the edge of the loaded area fades into fog instead of showing sky.
-  - On start it moves the car into a lane near the middle of tile (0,0).
+  - On start it builds the taxi (unless a car is assigned) and puts it in a lane near the middle of tile (0,0).
 - `Assets/Scripts/City/CityGenerator.cs` is pure C#, which is why it can run off the main thread.
   - The same seed and tile always give the same city, so driving back shows the same streets. Tiles line up because each one has roads only on its west and south edges.
   - Smooth noise decides how "downtown" each block is: towers cluster in downtowns with low-rise in between. There's always a downtown around the start.
@@ -46,6 +46,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
   - Sideways grip per wheel, with less grip on the rear wheels when the handbrake is on, for drifting.
   - Steering gets tighter at speed.
   - All tuning values are on the component in the Inspector.
+- `Assets/Scripts/CrashFeedback.cs` (added by the car): sparks where you hit something, camera shake, and a split-second slow motion on hard hits. Scraping along a wall throws a stream of sparks.
 - `Assets/Scripts/PlayerCar.cs`: the taxi is built in code when you press Play (the City Streamer calls it). It's made of boxes and cylinders: a yellow body with a black stripe, a glass cabin, bumpers, lights, a roof sign that's lit while the taxi is free, and wheels that steer and spin. Its materials are tinted copies of one city material, so the build needs no extra shaders. The City Streamer places it on a road and points the camera at it. To drive a different car, drag it into the City Streamer's **Car** field.
 
 ### Camera
@@ -54,6 +55,11 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 - Swings back behind the car about 1.5 s after you stop moving the camera.
 - Pulls in when a building gets in the way (cars and other rigidbodies are ignored).
 - Field of view widens a little with speed.
+
+### Taxi game
+`Assets/Scripts/Taxi/` creates itself at startup:
+- `TaxiGame.cs`: people with a green light over their head want a ride. Stop next to one to pick them up, then drive to the yellow beacon 4–8 blocks away and stop there to get paid ($25). An arrow over the taxi points at the nearest fare or the drop-off. Money and trip count are saved in `PlayerPrefs`. Shows the money and what to do next at the top of the screen.
+- `Pedestrians.cs`: about 40 blocky walkers loop around the blocks near you, turning back or stopping now and then, and 5 fares wait at the curb. People who end up far away are moved to a block near you.
 
 ### Traffic
 `Assets/Scripts/Traffic/Traffic.cs` creates itself at startup. About 28 cars and vans drive in the right-hand lanes and pick a random way at each intersection. They stop for traffic lights (not drawn; each intersection lets north-south and east-west go in turn, with an all-red gap), queue behind the car in front (yours too), and wait for oncoming cars before turning left. Brake lights come on when they slow down. Each one is a physics body held on its lane, so you can shove it. Knock it more than about 2 m off its lane and it tumbles free until it's out of sight, then it's reused. Cars far from you, or stuck for 10 s out of sight, are moved to a road nearer you.
@@ -114,6 +120,7 @@ The APK is signed with Unity's debug key on this machine. Future updates need to
 - **Batch Android builds must use `-buildTarget Android`.** Without it, Unity starts on the PC platform and URP strips every shader. The phone shows the splash and then a grey screen, and logcat shows a `NullReferenceException` in `PostProcessPass.RenderPostProcessingRenderGraph`. To check a build, find `"Universal Render Pipeline/Lit" pass "ForwardLit"` in the build log: "After scriptable stripping" must not be 0. (Scoop & Sausage's `android-build.sh` doesn't pass this flag yet.)
 - **Fog must be on in the scene, not only from code.** URP strips fog shader variants when no scene in the build has fog turned on, so fog switched on only at runtime does nothing on the phone.
 - **Big flat meshes are split into a grid** (ground in 16 m squares, horizon in 100 m squares). URP works out fog per vertex, so one huge quad would fog the area near the camera wrongly.
+- **Materials made only in code need a shader that's in the build.** URP strips shaders no scene material uses. So the glow (beacons, arrow, fare lights, brake lights) and the sparks use materials in `Assets/Resources/`, which always go into the build. Everything else is a tinted copy of a city material.
 - **Meshes made at runtime must be destroyed by hand.** Destroying a GameObject doesn't free its Mesh. CityStreamer keeps a list for each tile and destroys them when it unloads the tile.
 - **Performance (Galaxy S23 Ultra, old pre-built city):** about 9 copies of the old 2,300-object map ran at 120 fps, 16 at 60 fps and 49 at 30 fps. The processor ran out before the GPU. The new city is about 70 objects per tile.
 - **App icon:** there isn't one yet, so it's Unity's default icon.
