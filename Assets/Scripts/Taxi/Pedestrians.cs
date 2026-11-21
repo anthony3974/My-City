@@ -21,7 +21,7 @@ public class Pedestrians : MonoBehaviour
     const float Height = 1.7f;           // top of the head
     const float HipHeight = 0.6f;
     const float SidewalkTop = 0.2f;     // top of the raised block slab, see CityGenerator
-    const float WalkInset = 1.25f;      // middle of the 2.5 m sidewalk
+    public const float WalkInset = 1.25f;   // middle of the 2.5 m sidewalk
     const float FareInset = 0.6f;       // at the curb
 
     class Person
@@ -119,7 +119,7 @@ public class Pedestrians : MonoBehaviour
         {
             if (!p.fare) continue;
             Vector3 fp = SidewalkPoint(p.block, p.u, FareInset, out _, out _);
-            float d = Flat(fp - from).sqrMagnitude;
+            float d = Shapes.Flat(fp - from).sqrMagnitude;
             if (d < best) { best = d; pos = fp; }
         }
         return best < float.MaxValue;
@@ -138,7 +138,7 @@ public class Pedestrians : MonoBehaviour
         foreach (var p in people)
         {
             if (!p.fare) continue;
-            if (Flat(SidewalkPoint(p.block, p.u, FareInset, out _, out _) - carPos).sqrMagnitude > radius * radius) continue;
+            if (Shapes.Flat(SidewalkPoint(p.block, p.u, FareInset, out _, out _) - carPos).sqrMagnitude > radius * radius) continue;
             Respawn(p, nearOk: false);
             return true;
         }
@@ -153,7 +153,7 @@ public class Pedestrians : MonoBehaviour
         foreach (var p in people)
         {
             if (p.fare) continue;
-            float d = Flat(p.body.position - car.position).sqrMagnitude;
+            float d = Shapes.Flat(p.body.position - car.position).sqrMagnitude;
             if (d > best) { best = d; far = p; }
         }
         if (far == null) return;
@@ -191,8 +191,6 @@ public class Pedestrians : MonoBehaviour
         }
     }
 
-    static Vector3 Flat(Vector3 v) => new(v.x, 0f, v.z);
-
     // ------------------------------------------------------------------ Movement
 
     void Update()
@@ -202,7 +200,7 @@ public class Pedestrians : MonoBehaviour
 
         foreach (var p in people)
         {
-            if (Flat(p.body.position - car.position).sqrMagnitude > despawnDistance * despawnDistance)
+            if (Shapes.Flat(p.body.position - car.position).sqrMagnitude > despawnDistance * despawnDistance)
                 Respawn(p, nearOk: false);
 
             if (p.fare)
@@ -294,9 +292,7 @@ public class Pedestrians : MonoBehaviour
         var mats = new Material[colors.Length];
         for (int i = 0; i < mats.Length; i++)
         {
-            mats[i] = new Material(lit) { name = $"{name} {i}" };
-            mats[i].SetColor("_BaseColor", colors[i]);
-            mats[i].SetFloat("_Smoothness", 0.15f);
+            mats[i] = Shapes.Tinted(lit, colors[i], 0.15f, $"{name} {i}");
             owned.Add(mats[i]);
         }
         return mats;
@@ -313,14 +309,14 @@ public class Pedestrians : MonoBehaviour
         var skinTris = new List<int>();
         var eyeTris = new List<int>();
 
-        Cube(verts, normals, clothesTris, new Vector3(0f, 0.94f, 0f), new Vector3(0.48f, 0.72f, 0.26f));       // torso
-        Cube(verts, normals, clothesTris, new Vector3(-0.315f, 0.935f, 0f), new Vector3(0.13f, 0.61f, 0.14f)); // left arm
+        Shapes.Box(verts, normals, clothesTris, new Vector3(0f, 0.94f, 0f), new Vector3(0.48f, 0.72f, 0.26f));       // torso
+        Shapes.Box(verts, normals, clothesTris, new Vector3(-0.315f, 0.935f, 0f), new Vector3(0.13f, 0.61f, 0.14f)); // left arm
         var shoulder = new Vector3(0.315f, 1.24f, 0f);
         var raise = hailing ? Quaternion.AngleAxis(150f, Vector3.forward) : Quaternion.identity;
-        Cube(verts, normals, clothesTris, new Vector3(0.315f, 0.935f, 0f), new Vector3(0.13f, 0.61f, 0.14f), raise, shoulder);
-        Cube(verts, normals, skinTris, new Vector3(0f, 1.49f, 0f), new Vector3(0.38f, 0.38f, 0.38f));         // head
-        Cube(verts, normals, eyeTris, new Vector3(-0.085f, 1.52f, 0.19f), new Vector3(0.06f, 0.06f, 0.02f));
-        Cube(verts, normals, eyeTris, new Vector3(0.085f, 1.52f, 0.19f), new Vector3(0.06f, 0.06f, 0.02f));
+        Shapes.Box(verts, normals, clothesTris, new Vector3(0.315f, 0.935f, 0f), new Vector3(0.13f, 0.61f, 0.14f), raise, shoulder);
+        Shapes.Box(verts, normals, skinTris, new Vector3(0f, 1.49f, 0f), new Vector3(0.38f, 0.38f, 0.38f));         // head
+        Shapes.Box(verts, normals, eyeTris, new Vector3(-0.085f, 1.52f, 0.19f), new Vector3(0.06f, 0.06f, 0.02f));
+        Shapes.Box(verts, normals, eyeTris, new Vector3(0.085f, 1.52f, 0.19f), new Vector3(0.06f, 0.06f, 0.02f));
 
         var m = new Mesh { name = hailing ? "Fare Body" : "Walker Body" };
         m.SetVertices(verts);
@@ -338,42 +334,13 @@ public class Pedestrians : MonoBehaviour
         var verts = new List<Vector3>();
         var normals = new List<Vector3>();
         var tris = new List<int>();
-        Cube(verts, normals, tris, new Vector3(0f, -HipHeight / 2f, 0f), new Vector3(0.17f, HipHeight, 0.18f));
+        Shapes.Box(verts, normals, tris, new Vector3(0f, -HipHeight / 2f, 0f), new Vector3(0.17f, HipHeight, 0.18f));
         var m = new Mesh { name = "Leg" };
         m.SetVertices(verts);
         m.SetNormals(normals);
         m.SetTriangles(tris, 0);
         m.RecalculateBounds();
         return m;
-    }
-
-    /// <summary>Adds a box (24 vertices, flat normals), optionally rotated around a pivot.</summary>
-    static void Cube(List<Vector3> verts, List<Vector3> normals, List<int> tris, Vector3 center, Vector3 size,
-        Quaternion? rotation = null, Vector3 pivot = default)
-    {
-        Quaternion rot = rotation ?? Quaternion.identity;
-        Vector3 h = size / 2f;
-        for (int axis = 0; axis < 3; axis++)
-            for (int sign = -1; sign <= 1; sign += 2)
-            {
-                Vector3 n = Vector3.zero, u = Vector3.zero, v = Vector3.zero;
-                n[axis] = sign;
-                u[(axis + 1) % 3] = h[(axis + 1) % 3];
-                v[(axis + 2) % 3] = h[(axis + 2) % 3];
-                Vector3 f = center + n * h[axis];
-                Vector3 p0 = f - u - v, p1 = f - u + v, p2 = f + u + v, p3 = f + u - v;
-
-                int b = verts.Count;
-                foreach (var q in new[] { p0, p1, p2, p3 })
-                    verts.Add(pivot + rot * (q - pivot));
-                Vector3 rn = rot * n;
-                for (int k = 0; k < 4; k++) normals.Add(rn);
-                // Unity draws faces whose corners go clockwise seen from outside, i.e. Cross(b - a, c - a) points out.
-                if (Vector3.Dot(Vector3.Cross(p1 - p0, p2 - p0), n) > 0f)
-                    tris.AddRange(new[] { b, b + 1, b + 2, b, b + 2, b + 3 });
-                else
-                    tris.AddRange(new[] { b, b + 2, b + 1, b, b + 3, b + 2 });
-            }
     }
 
     Transform FareLight(Mesh beacon)

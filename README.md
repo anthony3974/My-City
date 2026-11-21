@@ -45,9 +45,8 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
   - Each wheel is a spring, so the car rides up curbs.
   - Sideways grip per wheel, with less grip on the rear wheels when the handbrake is on, for drifting.
   - Steering gets tighter at speed.
-  - Plain km/h text readout, hidden when the dial speedometer (below) is there.
   - All tuning values are on the component in the Inspector.
-- `Assets/Editor/CarSpawner.cs`: **Tools → Spawn Car** builds the car out of primitives (red body, glass cabin, bumpers, lights, wheels that steer and spin). It hooks up the Main Camera. Where you spawn it doesn't matter, because the City Streamer moves the car onto a road when you press Play.
+- `Assets/Scripts/PlayerCar.cs`: the taxi is built in code when you press Play (the City Streamer calls it). It's made of boxes and cylinders: a yellow body with a black stripe, a glass cabin, bumpers, lights, a roof sign that's lit while the taxi is free, and wheels that steer and spin. Its materials are tinted copies of one city material, so the build needs no extra shaders. The City Streamer places it on a road and points the camera at it. To drive a different car, drag it into the City Streamer's **Car** field.
 
 ### Camera
 `Assets/Scripts/ThirdPersonCamera.cs`, on the Main Camera:
@@ -80,7 +79,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 | Zoom | Scroll | Bumpers | none |
 
 ### Scene
-`Assets/Scenes/SampleScene.unity` holds the City Streamer, the car, the camera, the light and the post-processing volume. The city itself only exists in Play mode. It's the only scene in the build.
+`Assets/Scenes/SampleScene.unity` holds the City Streamer, the camera, the light and the post-processing volume. The city and the taxi only exist in Play mode. It's the only scene in the build.
 
 ## Building for Android
 

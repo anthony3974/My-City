@@ -5,7 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tools > City > Set Up Scene: bakes the textures and materials, removes the old pre-built city from the scene,
-/// adds the City Streamer (the endless city) and sets up fog to hide the edge of the loaded area.
+/// adds the City Streamer (the endless city, which also builds the taxi) and sets up fog to hide the edge of the
+/// loaded area. Removes the old "Player Car" from the scene if it is still there.
 /// Batch: Unity -batchmode -buildTarget Android -executeMethod CitySceneSetup.CommandLine
 /// </summary>
 public static class CitySceneSetup
@@ -24,18 +25,21 @@ public static class CitySceneSetup
         var scene = EditorSceneManager.GetActiveScene();
         if (scene.path != ScenePath) scene = EditorSceneManager.OpenScene(ScenePath);
 
-        var old = GameObject.Find("Generated City");
-        if (old != null) UnityEngine.Object.DestroyImmediate(old);
+        foreach (var name in new[] { "Generated City", "Player Car" })
+        {
+            var old = GameObject.Find(name);
+            if (old != null) UnityEngine.Object.DestroyImmediate(old);
+        }
 
         var go = GameObject.Find("City Streamer");
         if (go == null) go = new GameObject("City Streamer");
         var streamer = go.GetComponent<CityStreamer>();
         if (streamer == null) streamer = go.AddComponent<CityStreamer>();
         streamer.materials = mats;
-        streamer.car = GameObject.Find("Player Car")?.transform;
+        streamer.car = null;   // built in code at startup
         var cam = Camera.main;
         streamer.followCamera = cam != null ? cam.GetComponent<ThirdPersonCamera>() : null;
-        if (streamer.car == null) Debug.LogError("City setup: no 'Player Car' in the scene. Use Tools > Spawn Car first.");
+        if (streamer.followCamera == null) Debug.LogError("City setup: the Main Camera needs a ThirdPersonCamera.");
 
         if (cam != null)
         {

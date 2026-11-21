@@ -19,6 +19,7 @@
 
 ## Polish
 10. **App icon.** It still uses Unity's default.
+10b. **Plus-sign wheels.** Two crossed spokes ("+") on each wheel instead of the single bar, so the spin reads better (taxi in `PlayerCar.cs`, maybe traffic too).
 11. **Car choice or paint colour**, and a pause and settings menu (graphics quality, touch layout).
 12. **Tilt steering** as an option on phones.
 

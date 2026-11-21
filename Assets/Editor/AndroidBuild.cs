@@ -48,8 +48,20 @@ public static class AndroidBuild
     public static bool Build(string path, bool development = false)
     {
         ApplySettings();
+        // Set for this build only, then put back, so builds don't leave ProjectSettings.asset changed.
+        var stackTraces = PlayerSettings.GetIl2CppStacktraceInformation(NamedBuildTarget.Android);
         PlayerSettings.SetIl2CppStacktraceInformation(NamedBuildTarget.Android,
             development ? Il2CppStacktraceInformation.MethodFileLineNumber : Il2CppStacktraceInformation.MethodOnly);
+        try { return BuildPlayer(path, development); }
+        finally
+        {
+            PlayerSettings.SetIl2CppStacktraceInformation(NamedBuildTarget.Android, stackTraces);
+            AssetDatabase.SaveAssets();
+        }
+    }
+
+    static bool BuildPlayer(string path, bool development)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
 
         var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions

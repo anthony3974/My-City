@@ -53,16 +53,13 @@ public class CarController : MonoBehaviour
 
     [Header("Body")]
     public Vector3 centerOfMass = new Vector3(0f, 0.45f, 0f);
-    public bool showSpeedometer = true;
 
     Rigidbody rb;
     float throttleInput, steerInput, currentSteer;
     bool handbrake;
     readonly RaycastHit[] hits = new RaycastHit[8];
-    GUIStyle speedStyle;
 
     public float ForwardSpeed => rb ? Vector3.Dot(rb.linearVelocity, transform.forward) : 0f;
-    public Rigidbody Body => rb;
 
     void Awake()
     {
@@ -234,28 +231,6 @@ public class CarController : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
         rb.position += Vector3.up * 1.5f;
         rb.rotation = Quaternion.Euler(0f, yaw, 0f);
-    }
-
-    void OnGUI()
-    {
-        if (!showSpeedometer || rb == null) return;
-        speedStyle ??= new GUIStyle(GUI.skin.label)
-        {
-            fontStyle = FontStyle.Bold,
-            wordWrap = false,
-            clipping = TextClipping.Overflow,
-            normal = { textColor = Color.white }
-        };
-        speedStyle.fontSize = Mathf.Max(32, Screen.height / 22);
-
-        var content = new GUIContent($"{Mathf.Abs(ForwardSpeed) * 3.6f:0} km/h");
-        Vector2 size = speedStyle.CalcSize(content);
-        var safe = Screen.safeArea;
-        // Same margin as the touch buttons, so it scales with screen size.
-        float m = Mathf.Min(Screen.width, Screen.height) * 0.05f;
-        // Top-left on phones, where the touch buttons don't cover it; bottom-left otherwise.
-        float y = TouchControls.Active ? Screen.height - safe.yMax + m : Screen.height - size.y - m;
-        GUI.Label(new Rect(safe.xMin + m, y, size.x, size.y), content, speedStyle);
     }
 
     void OnDrawGizmosSelected()

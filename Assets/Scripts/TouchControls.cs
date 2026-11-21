@@ -53,7 +53,7 @@ public class TouchControls : MonoBehaviour
         float u = Mathf.Min(Screen.width, Screen.height) * 0.2f;
         float m = u * 0.25f;
         var safe = Screen.safeArea;
-        float bottom = safe.yMax - m - u;   // GUI coordinates: y down
+        float bottom = Screen.height - safe.yMin - m - u;   // GUI coordinates: y down, safe area: y up
         left = new Rect(safe.xMin + m, bottom, u, u);
         right = new Rect(left.xMax + m * 0.6f, bottom, u, u);
         gas = new Rect(safe.xMax - m - u, bottom - u * 0.3f, u, u * 1.3f);

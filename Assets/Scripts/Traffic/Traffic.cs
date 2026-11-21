@@ -340,7 +340,7 @@ public class Traffic : MonoBehaviour
 
         foreach (var c in cars)
         {
-            float d = Flat(c.rb.position - pp).magnitude;
+            float d = Shapes.Flat(c.rb.position - pp).magnitude;
             bool reuse = !c.placed || d > despawnDistance
                 || (c.crashed && (d > 70f || Time.time - c.crashTime > 30f) && !Visible(c.rb.position))
                 || (c.stuck > 10f && !Visible(c.rb.position));
@@ -362,8 +362,6 @@ public class Traffic : MonoBehaviour
         return v.z > 0f && v.z < 350f && v.x > -0.15f && v.x < 1.15f && v.y > -0.15f && v.y < 1.15f;
     }
 
-    static Vector3 Flat(Vector3 v) => new(v.x, 0f, v.z);
-
     void Respawn(Car c, bool initial)
     {
         Vector3 pp = player.position;
@@ -377,7 +375,7 @@ public class Traffic : MonoBehaviour
             c.s = Random.Range(0f, c.length * 0.6f);
             Vector3 p = c.Point();
 
-            float d = Flat(p - pp).magnitude;
+            float d = Shapes.Flat(p - pp).magnitude;
             if (d < (initial ? 30f : 90f) || d > despawnDistance - 40f) continue;
             if (!initial && d < 180f && Visible(p)) continue;
             if (Crowded(c, p)) continue;
@@ -393,7 +391,7 @@ public class Traffic : MonoBehaviour
     bool Crowded(Car c, Vector3 p)
     {
         foreach (var o in cars)
-            if (o != c && o.placed && Flat(o.rb.position - p).sqrMagnitude < 15f * 15f) return true;
+            if (o != c && o.placed && Shapes.Flat(o.rb.position - p).sqrMagnitude < 15f * 15f) return true;
         return false;
     }
 
@@ -498,9 +496,7 @@ public class Traffic : MonoBehaviour
 
     Material Tint(Material source, Color c, float smoothness, string name)
     {
-        var m = new Material(source) { name = name };
-        m.SetColor("_BaseColor", c);
-        m.SetFloat("_Smoothness", smoothness);
+        var m = Shapes.Tinted(source, c, smoothness, name);
         owned.Add(m);
         return m;
     }
@@ -551,17 +547,8 @@ public class Traffic : MonoBehaviour
 
         public void Box(int sub, Vector3 c, Vector3 size)
         {
-            Vector3 h = size / 2f;
-            for (int axis = 0; axis < 3; axis++)
-                for (int sign = -1; sign <= 1; sign += 2)
-                {
-                    Vector3 n = Vector3.zero, u = Vector3.zero, v = Vector3.zero;
-                    n[axis] = sign;
-                    u[(axis + 1) % 3] = h[(axis + 1) % 3];
-                    v[(axis + 2) % 3] = h[(axis + 2) % 3];
-                    Vector3 f = c + n * h[axis];
-                    Quad(sub, f - u - v, f - u + v, f + u + v, f + u - v, n);
-                }
+            Shapes.Box(verts, normals, tris[sub], c, size);
+            while (colors.Count < verts.Count) colors.Add(Color.white);
         }
 
         /// <summary>A wheel with its axle along X.</summary>

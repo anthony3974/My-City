@@ -9,7 +9,7 @@ using Debug = UnityEngine.Debug;
 /// Endless city. Keeps a square of tiles (3x3 by default) loaded around the car, generating new ones on a
 /// worker thread and building them a few blocks per frame so driving doesn't stutter. Far tiles are unloaded.
 /// Also moves the whole world back towards (0,0,0) now and then, because floats lose precision far from the
-/// origin (shaky car, flickering surfaces).
+/// origin (shaky car, flickering surfaces). Builds the player's taxi (PlayerCar) unless a car is assigned.
 /// </summary>
 public class CityStreamer : MonoBehaviour
 {
@@ -17,7 +17,9 @@ public class CityStreamer : MonoBehaviour
     [Tooltip("Indexed by CityMat. Filled in by Tools > City > Set Up Scene.")]
     public Material[] materials = new Material[(int)CityMat.Count];
 
+    [Tooltip("Leave empty to have the taxi built in code at startup.")]
     public Transform car;
+    [Tooltip("Leave empty to use the Main Camera's ThirdPersonCamera.")]
     public ThirdPersonCamera followCamera;
     public bool placeCarAtStart = true;
 
@@ -53,6 +55,7 @@ public class CityStreamer : MonoBehaviour
     Vector2Int originCell, center;
     Rigidbody carBody;
     Transform horizon;
+    Mesh horizonMesh;
 
     // Development-build stats.
     float statTime, statWorst;
@@ -66,7 +69,9 @@ public class CityStreamer : MonoBehaviour
 
     void Awake()
     {
-        if (car == null) { Debug.LogError("CityStreamer: no car assigned."); enabled = false; return; }
+        if (car == null) car = PlayerCar.Create(materials[(int)CityMat.WhitePaint]).transform;
+        if (followCamera == null && Camera.main != null) followCamera = Camera.main.GetComponent<ThirdPersonCamera>();
+        if (followCamera != null && followCamera.target == null) followCamera.target = car;
         carBody = car.GetComponent<Rigidbody>();
 
         if (placeCarAtStart)
@@ -108,6 +113,7 @@ public class CityStreamer : MonoBehaviour
     {
         foreach (var t in tiles.Values) Unload(t);
         tiles.Clear();
+        Destroy(horizonMesh);
     }
 
     // ------------------------------------------------------------------ Grid
@@ -284,6 +290,7 @@ public class CityStreamer : MonoBehaviour
         go.transform.SetParent(transform, false);
         var holder = new Tile();
         AddMesh(holder, go, md, castShadows: false);
+        horizonMesh = holder.meshes[0];
         go.GetComponent<MeshRenderer>().receiveShadows = false;
         horizon = go.transform;
     }

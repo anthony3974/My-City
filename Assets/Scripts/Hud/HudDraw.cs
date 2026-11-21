@@ -68,7 +68,7 @@ public static class HudDraw
     {
         var s = Label;
         s.fontSize = size;
-        var r = new Rect(center.x - 200f, center.y - size, 400f, size * 2f);
+        var r = new Rect(center.x - Screen.width, center.y - size, Screen.width * 2f, size * 2f);
         float o = Mathf.Max(1f, size / 14f);
         s.normal.textColor = new Color(0f, 0f, 0f, 0.6f * c.a);
         GUI.Label(new Rect(r.x + o, r.y + o, r.width, r.height), text, s);

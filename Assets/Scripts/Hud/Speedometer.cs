@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Round speedometer: a ring of lights that fill up with speed (blue to green to yellow, red past the redline),
 /// a needle, the speed in big digits and an R when reversing. Bottom-centre on phones (between the touch
-/// buttons), bottom-right otherwise. Replaces CarController's text speedometer.
+/// buttons), bottom-right otherwise.
 /// Creates itself at startup in any scene that has a CityStreamer.
 /// </summary>
 public class Speedometer : MonoBehaviour
@@ -29,7 +29,6 @@ public class Speedometer : MonoBehaviour
         if (controller == null) return;
         var s = new GameObject("Speedometer").AddComponent<Speedometer>();
         s.car = controller;
-        controller.showSpeedometer = false;
     }
 
     void Update()

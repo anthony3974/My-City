@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 /// Taxi job. People with a green light over their head want a ride: stop next to one and they get in. Then
 /// drive to the yellow beacon a few blocks away and stop there to drop them off and get paid. An arrow above
 /// the car points to the nearest fare, or to the drop-off once someone is in. Money is kept in PlayerPrefs.
-/// Creates itself at startup in any scene that has a CityStreamer, and adds TaxiLook and Pedestrians.
+/// Creates itself at startup in any scene that has a CityStreamer, and adds Pedestrians.
 /// </summary>
 public class TaxiGame : MonoBehaviour
 {
@@ -26,7 +26,7 @@ public class TaxiGame : MonoBehaviour
     CityStreamer city;
     Transform car;
     Rigidbody body;
-    TaxiLook look;
+    PlayerCar look;   // null if the scene uses some other car
     Pedestrians people;
 
     bool passenger;
@@ -38,7 +38,6 @@ public class TaxiGame : MonoBehaviour
     MaterialPropertyBlock props;
     Mesh beaconMesh, arrowMesh;
     Renderer beacon, arrow;
-    GUIStyle bigStyle, style;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
@@ -57,8 +56,7 @@ public class TaxiGame : MonoBehaviour
         body = car.GetComponent<Rigidbody>();
         city.OriginShifted += OnOriginShifted;
 
-        look = car.GetComponent<TaxiLook>();
-        if (look == null) look = car.gameObject.AddComponent<TaxiLook>();
+        look = car.GetComponent<PlayerCar>();
 
         // In Resources so its shader is always in the build (URP strips shaders no scene material uses).
         glow = Resources.Load<Material>("Glow");
@@ -75,7 +73,7 @@ public class TaxiGame : MonoBehaviour
         }
 
         people = gameObject.AddComponent<Pedestrians>();
-        people.Init(city, car, look.Paint, glow, beaconMesh);
+        people.Init(city, car, look != null ? look.Paint : city.materials[(int)CityMat.WhitePaint], glow, beaconMesh);
     }
 
     void OnDestroy()
@@ -110,7 +108,7 @@ public class TaxiGame : MonoBehaviour
         return p;
     }
 
-    static float FlatDistance(Vector3 a, Vector3 b) => new Vector2(a.x - b.x, a.z - b.z).magnitude;
+    static float FlatDistance(Vector3 a, Vector3 b) => Shapes.Flat(a - b).magnitude;
 
     void Update()
     {
@@ -123,15 +121,15 @@ public class TaxiGame : MonoBehaviour
             {
                 passenger = true;
                 PickDropOff();
-                look.SetFree(false);
+                if (look != null) look.SetFree(false);
             }
         }
         else if (stopped && FlatDistance(car.position, DropPoint()) < dropRadius)
         {
             passenger = false;
-            look.SetFree(true);
+            if (look != null) look.SetFree(true);
             // The passenger gets out on the sidewalk next to the drop-off and walks away.
-            float len = people.SideLength(1.25f);
+            float len = people.SideLength(Pedestrians.WalkInset);
             people.DropOff(dropBlock, dropSide * len + len / 2f);
 
             money += farePay;
@@ -263,20 +261,7 @@ public class TaxiGame : MonoBehaviour
 
     void OnGUI()
     {
-        if (people == null || car == null) return;
-        if (style == null)
-        {
-            style = new GUIStyle(GUI.skin.label)
-            {
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.UpperCenter,
-                wordWrap = false,
-                clipping = TextClipping.Overflow,
-            };
-            bigStyle = new GUIStyle(style);
-        }
-        style.fontSize = Mathf.Max(26, Screen.height / 28);
-        bigStyle.fontSize = Mathf.Max(36, Screen.height / 18);
+        if (people == null || car == null || Event.current.type != EventType.Repaint) return;
 
         string status;
         bool fast = Speed >= stopSpeed;
@@ -295,18 +280,16 @@ public class TaxiGame : MonoBehaviour
         var safe = Screen.safeArea;
         float m = Mathf.Min(Screen.width, Screen.height) * 0.05f;
         float y = Screen.height - safe.yMax + m;
-        y = Line(y, $"${money}", bigStyle);
-        y = Line(y, status, style);
-        if (Time.unscaledTime < paidUntil) Line(y, $"+${farePay}", style, new Color(0.4f, 1f, 0.45f));
+        y = Line(y, $"${money}", Mathf.Max(36, Screen.height / 18));
+        y = Line(y, status, Mathf.Max(26, Screen.height / 28));
+        if (Time.unscaledTime < paidUntil) Line(y, $"+${farePay}", Mathf.Max(26, Screen.height / 28), new Color(0.4f, 1f, 0.45f));
     }
 
-    float Line(float y, string text, GUIStyle s, Color? color = null)
+    /// <summary>One line of centred text below y; returns the y of the next line.</summary>
+    static float Line(float y, string text, int size, Color? color = null)
     {
-        float h = s.fontSize * 1.3f, o = Mathf.Max(1f, s.fontSize / 16f);
-        s.normal.textColor = new Color(0f, 0f, 0f, 0.7f);
-        GUI.Label(new Rect(o, y + o, Screen.width, h), text, s);
-        s.normal.textColor = color ?? Color.white;
-        GUI.Label(new Rect(0f, y, Screen.width, h), text, s);
+        float h = size * 1.3f;
+        HudDraw.Text(new Vector2(Screen.width / 2f, y + h / 2f), text, size, color ?? Color.white);
         return y + h;
     }
 }
