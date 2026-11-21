@@ -293,7 +293,14 @@ PlayerSettings:
   AndroidAppBundleSizeToValidate: 150
   AndroidReportGooglePlayAppDependencies: 1
   androidSymbolsSizeThreshold: 800
-  m_BuildTargetIcons: []
+  m_BuildTargetIcons:
+  - m_BuildTarget:
+    m_Icons:
+    - serializedVersion: 2
+      m_Icon: {fileID: 2800000, guid: c7afdee54e37457a9829937188a913b5, type: 3}
+      m_Width: 128
+      m_Height: 128
+      m_Kind: 0
   m_BuildTargetPlatformIcons:
   - m_BuildTarget: iPhone
     m_Icons:
@@ -394,7 +401,9 @@ PlayerSettings:
       m_SubKind: App Store
   - m_BuildTarget: Android
     m_Icons:
-    - m_Textures: []
+    - m_Textures:
+      - {fileID: 2800000, guid: 426805d49ebe493488e433a7c585d599, type: 3}
+      - {fileID: 2800000, guid: 67953325eaac47c9bf998f8a04c30027, type: 3}
       m_Width: 432
       m_Height: 432
       m_Kind: 2
@@ -424,7 +433,8 @@ PlayerSettings:
       m_Height: 81
       m_Kind: 2
       m_SubKind: 
-    - m_Textures: []
+    - m_Textures:
+      - {fileID: 2800000, guid: 19de3e8715cd4caa963bc06fab761e60, type: 3}
       m_Width: 192
       m_Height: 192
       m_Kind: 1
@@ -454,7 +464,8 @@ PlayerSettings:
       m_Height: 36
       m_Kind: 1
       m_SubKind: 
-    - m_Textures: []
+    - m_Textures:
+      - {fileID: 2800000, guid: c7afdee54e37457a9829937188a913b5, type: 3}
       m_Width: 192
       m_Height: 192
       m_Kind: 0
