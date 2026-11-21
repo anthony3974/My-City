@@ -17,6 +17,8 @@ public class TouchControls : MonoBehaviour
     public static bool ResetPressed { get; private set; }
     public static Vector2 LookDelta { get; private set; }   // pixels this frame
     public static bool Active { get; private set; }
+    /// <summary>Where the RESET button is (GUI coordinates); the upgrade menu's button goes under it.</summary>
+    public static Rect ResetRect { get; private set; }
 
     Rect left, right, gas, brake, handbrakeRect, reset;
     int lookFingerId = -1;
@@ -60,6 +62,7 @@ public class TouchControls : MonoBehaviour
         brake = new Rect(gas.xMin - m * 0.6f - u, bottom, u, u);
         handbrakeRect = new Rect(brake.xMin, gas.yMin - m * 0.6f - u * 0.6f, gas.xMax - brake.xMin, u * 0.6f);
         reset = new Rect(safe.xMax - m - u * 1.2f, Screen.height - safe.yMax + m, u * 1.2f, u * 0.5f);
+        ResetRect = reset;
     }
 
     void Update()
@@ -75,6 +78,9 @@ public class TouchControls : MonoBehaviour
             Vector2 p = t.screenPosition;
             p.y = Screen.height - p.y;
             int id = t.touchId;
+
+            // The upgrade menu (or its button) takes this touch.
+            if (UpgradeMenu.Blocks(p)) continue;
 
             if (id == lookFingerId)
             {

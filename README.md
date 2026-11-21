@@ -45,7 +45,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
   - Each wheel is a spring, so the car rides up curbs.
   - Sideways grip per wheel, with less grip on the rear wheels when the handbrake is on, for drifting.
   - Steering gets tighter at speed.
-  - All tuning values are on the component in the Inspector.
+  - All tuning values are on the component in the Inspector. They are the starting car's (86 km/h, loose grip); upgrades raise them.
 - `Assets/Scripts/CrashFeedback.cs` (added by the car): sparks where you hit something, camera shake, and a split-second slow motion on hard hits. Scraping along a wall throws a stream of sparks.
 - `Assets/Scripts/PlayerCar.cs`: the taxi is built in code when you press Play (the City Streamer calls it). It's made of boxes and cylinders: a yellow body with a black stripe, a glass cabin, bumpers, lights, a roof sign that's lit while the taxi is free, and wheels that steer and spin. Its materials are tinted copies of one city material, so the build needs no extra shaders. The City Streamer places it on a road and points the camera at it. To drive a different car, drag it into the City Streamer's **Car** field.
 
@@ -59,6 +59,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 ### Taxi game
 `Assets/Scripts/Taxi/` creates itself at startup:
 - `TaxiGame.cs`: people with a green light over their head want a ride. Stop next to one to pick them up, then drive to the yellow beacon 4–8 blocks away and stop there to get paid ($25). An arrow over the taxi points at the nearest fare or the drop-off. Money and trip count are saved in `PlayerPrefs`. Shows the money and what to do next at the top of the screen.
+- `Assets/Scripts/UpgradeMenu.cs` (added by TaxiGame): spend fare money on speed, brakes and handling, five levels each ($50, $100, $150, $250, $400). Fully upgraded the car does 137 km/h with better grip and steering than the start. Levels are saved in `PlayerPrefs` and applied to the CarController. Opened with the UPGRADES button (top-right) and pauses the game while open.
 - `Pedestrians.cs`: about 40 blocky walkers loop around the blocks near you, turning back or stopping now and then, and 5 fares wait at the curb. People who end up far away are moved to a block near you.
 
 ### Traffic
@@ -83,6 +84,8 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 | Flip upright | R | Y | RESET |
 | Orbit camera | Hold right mouse + drag | Right stick | Drag on an empty part of the screen |
 | Zoom | Scroll | Bumpers | none |
+| Upgrades menu | U (Esc closes), or click UPGRADES | Start (B closes) | UPGRADES (back closes) |
+| In the menu: pick / buy | ↑ ↓ / Enter or Space, or click a price | D-pad / A | Tap a price |
 
 ### Scene
 `Assets/Scenes/SampleScene.unity` holds the City Streamer, the camera, the light and the post-processing volume. The city and the taxi only exist in Play mode. It's the only scene in the build.
@@ -108,7 +111,7 @@ For a development build that reports file and line numbers in stack traces, and 
 
 ## Releasing to F-Droid
 
-1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.3.0, version code 5.
+1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.4.0, version code 6.
 2. Build with `Tools/android-build.sh`.
 3. `cp Builds/Android/MyCity.apk ~/APKs/MyCity.apk`
 4. `~/fdroid/release.sh`
@@ -123,11 +126,9 @@ The APK is signed with Unity's debug key on this machine. Future updates need to
 - **Materials made only in code need a shader that's in the build.** URP strips shaders no scene material uses. So the glow (beacons, arrow, fare lights, brake lights) and the sparks use materials in `Assets/Resources/`, which always go into the build. Everything else is a tinted copy of a city material.
 - **Meshes made at runtime must be destroyed by hand.** Destroying a GameObject doesn't free its Mesh. CityStreamer keeps a list for each tile and destroys them when it unloads the tile.
 - **Performance (Galaxy S23 Ultra, old pre-built city):** about 9 copies of the old 2,300-object map ran at 120 fps, 16 at 60 fps and 49 at 30 fps. The processor ran out before the GPU. The new city is about 70 objects per tile.
-- **App icon:** there isn't one yet, so it's Unity's default icon.
 
 ## Ideas for later
 
-- App icon
 - Night mode with lit windows (a glow map on the facades)
 - Streetlights, and visible traffic lights (the traffic already obeys invisible ones)
 - Simpler versions of far blocks (LOD) if mid-range phones struggle

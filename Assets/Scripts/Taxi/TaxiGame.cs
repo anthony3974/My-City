@@ -74,6 +74,9 @@ public class TaxiGame : MonoBehaviour
 
         people = gameObject.AddComponent<Pedestrians>();
         people.Init(city, car, look != null ? look.Paint : city.materials[(int)CityMat.WhitePaint], glow, beaconMesh);
+
+        var controller = car.GetComponent<CarController>();
+        if (controller != null) gameObject.AddComponent<UpgradeMenu>().Init(this, controller);
     }
 
     void OnDestroy()
@@ -92,6 +95,18 @@ public class TaxiGame : MonoBehaviour
     // ------------------------------------------------------------------ Game logic
 
     float Speed => body ? body.linearVelocity.magnitude : 0f;
+
+    public int Money => money;
+
+    /// <summary>Takes cost from the money if there is enough (for the upgrade menu).</summary>
+    public bool Spend(int cost)
+    {
+        if (money < cost) return false;
+        money -= cost;
+        PlayerPrefs.SetInt(MoneyKey, money);
+        PlayerPrefs.Save();
+        return true;
+    }
 
     /// <summary>For the minimap: true and the drop-off point while someone is in the taxi.</summary>
     public bool TryGetDropOff(out Vector3 point)

@@ -30,7 +30,7 @@
 17. **Upgrades bought with taxi money.** Speed (top speed, acceleration), brakes (brake force) and handling (grip, steering), each in a few levels with rising prices, saved in `PlayerPrefs`.
 
 ## Done
-Crash feedback (1), HUD dial and minimap (2), taxi fares (4), AI traffic (7), app icon (10), plus-sign wheels (11), slower starting car (15), weaker starting grip (16).
+Crash feedback (1), HUD dial and minimap (2), taxi fares (4), AI traffic (7), app icon (10), plus-sign wheels (11), slower starting car (15), weaker starting grip (16), upgrades (17).
 
 ## Suggested order
-Upgrades (17), then checkpoint runs.
+Checkpoint runs (3), then a pause and settings menu (12).

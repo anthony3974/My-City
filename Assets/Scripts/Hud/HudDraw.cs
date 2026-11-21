@@ -6,8 +6,9 @@ using UnityEngine;
 /// </summary>
 public static class HudDraw
 {
-    static Texture2D disc, ring, bar, needle, arrow;
-    static GUIStyle label;
+    static Texture2D disc, ring, bar, needle, arrow, rounded;
+    static GUIStyle label, box;
+    const int BoxRadius = 14;
 
     public static Texture2D Disc => disc ? disc : disc = Make(128, 128, (x, y) => DiscAlpha(x, y, 64f, 0f));
     public static Texture2D Ring => ring ? ring : ring = Make(256, 256, (x, y) => DiscAlpha(x, y, 128f, 0.955f));
@@ -44,6 +45,26 @@ public static class HudDraw
             };
             return label;
         }
+    }
+
+    /// <summary>A filled rounded rectangle of any size (nine-sliced, so the corners keep their shape).</summary>
+    public static void Box(Rect r, Color c)
+    {
+        if (box == null)
+        {
+            const int n = BoxRadius * 2 + 4;
+            rounded = Make(n, n, (x, y) =>
+            {
+                float half = n / 2f, inner = half - BoxRadius;
+                float dx = Mathf.Max(Mathf.Abs(x - half) - inner, 0f), dy = Mathf.Max(Mathf.Abs(y - half) - inner, 0f);
+                return Mathf.Clamp01(BoxRadius - Mathf.Sqrt(dx * dx + dy * dy));
+            });
+            box = new GUIStyle { normal = { background = rounded }, border = new RectOffset(BoxRadius + 1, BoxRadius + 1, BoxRadius + 1, BoxRadius + 1) };
+        }
+        var old = GUI.color;
+        GUI.color = c;
+        box.Draw(r, false, false, false, false);
+        GUI.color = old;
     }
 
     public static void Draw(Rect r, Texture t, Color c)
