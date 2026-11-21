@@ -216,6 +216,12 @@ public static class CityGenerator
         return d * d;
     }
 
+    static float ParkChance(CitySettings s, float downtown) => s.parkChance * Mathf.Lerp(1.7f, 0.2f, downtown);
+
+    /// <summary>Whether block (gx, gz) is a park, without building it. Used by the minimap.</summary>
+    public static bool IsPark(CitySettings s, int gx, int gz) =>
+        new System.Random(Hash(s.seed, gx, gz)).NextDouble() < ParkChance(s, Downtown(s, gx, gz));
+
     static float ValueNoise(float x, float y, int seed)
     {
         int x0 = Mathf.FloorToInt(x), y0 = Mathf.FloorToInt(y);
@@ -265,7 +271,7 @@ public static class CityGenerator
             SolidBox(new Vector3(0f, 0.1f, 0f), new Vector3(s.blockSize, 0.2f, s.blockSize), CityMat.Sidewalk, CityMat.Sidewalk);
 
             float downtown = Downtown(s, gx, gz);
-            if (Chance(s.parkChance * Mathf.Lerp(1.7f, 0.2f, downtown)))
+            if (Chance(ParkChance(s, downtown)))   // the block's first random draw; IsPark relies on that
                 BuildPark();
             else
                 BuildBuildings(downtown);

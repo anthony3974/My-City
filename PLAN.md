@@ -22,5 +22,13 @@
 11. **Car choice or paint colour**, and a pause and settings menu (graphics quality, touch layout).
 12. **Tilt steering** as an option on phones.
 
+## Progression
+13. **Slower starting car.** Lower the base top speed and acceleration so there is room to grow.
+14. **Less grip in corners at the start.** The car turns too easily now; start with weaker cornering so better handling is something you earn.
+15. **Upgrades bought with taxi money.** Speed (top speed, acceleration), brakes (brake force) and handling (grip, steering), each in a few levels with rising prices, saved in `PlayerPrefs`.
+
+## Done
+Crash feedback (1), HUD dial and minimap (2), taxi fares (4), AI traffic (7).
+
 ## Suggested order
-Checkpoint runs, then AI traffic, then the HUD and minimap.
+Progression (13–15), then checkpoint runs.

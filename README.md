@@ -45,7 +45,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
   - Each wheel is a spring, so the car rides up curbs.
   - Sideways grip per wheel, with less grip on the rear wheels when the handbrake is on, for drifting.
   - Steering gets tighter at speed.
-  - Speed readout in km/h.
+  - Plain km/h text readout, hidden when the dial speedometer (below) is there.
   - All tuning values are on the component in the Inspector.
 - `Assets/Editor/CarSpawner.cs`: **Tools → Spawn Car** builds the car out of primitives (red body, glass cabin, bumpers, lights, wheels that steer and spin). It hooks up the Main Camera. Where you spawn it doesn't matter, because the City Streamer moves the car onto a road when you press Play.
 
@@ -53,8 +53,17 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 `Assets/Scripts/ThirdPersonCamera.cs`, on the Main Camera:
 - Smooth follow, orbit and zoom.
 - Swings back behind the car about 1.5 s after you stop moving the camera.
-- Pulls in when a building gets in the way.
+- Pulls in when a building gets in the way (cars and other rigidbodies are ignored).
 - Field of view widens a little with speed.
+
+### Traffic
+`Assets/Scripts/Traffic/Traffic.cs` creates itself at startup. About 28 cars and vans drive in the right-hand lanes and pick a random way at each intersection. They stop for traffic lights (not drawn; each intersection lets north-south and east-west go in turn, with an all-red gap), queue behind the car in front (yours too), and wait for oncoming cars before turning left. Brake lights come on when they slow down. Each one is a physics body held on its lane, so you can shove it. Knock it more than about 2 m off its lane and it tumbles free until it's out of sight, then it's reused. Cars far from you, or stuck for 10 s out of sight, are moved to a road nearer you.
+
+### HUD
+`Assets/Scripts/Hud/` creates itself at startup and draws with OnGUI:
+- `Speedometer.cs`: a round dial with a ring of lights that fill with speed (red past 120 km/h), a needle, the speed in digits and an R when reversing. Bottom-centre on phones, bottom-right otherwise.
+- `Minimap.cs`: a round map in the top-left, turned so the camera's view is up. It's drawn into a 160 px texture every frame from the road grid, with no second camera: roads, sidewalks, buildings (lighter downtown) and parks (`CityGenerator.IsPark`). It shows traffic, fares, the drop-off (pinned to the rim when it's off the map) and north.
+- `HudDraw.cs`: the soft circles, bars, needle and arrow, made in code.
 
 ### Touch controls
 `Assets/Scripts/TouchControls.cs` creates itself on touchscreen devices, so nothing needs to be in the scene. It draws its buttons with OnGUI.
@@ -94,7 +103,7 @@ For a development build that reports file and line numbers in stack traces, and 
 
 ## Releasing to F-Droid
 
-1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.1.2, version code 3.
+1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.3.0, version code 5.
 2. Build with `Tools/android-build.sh`.
 3. `cp Builds/Android/MyCity.apk ~/APKs/MyCity.apk`
 4. `~/fdroid/release.sh`
@@ -113,7 +122,6 @@ The APK is signed with Unity's debug key on this machine. Future updates need to
 ## Ideas for later
 
 - App icon
-- AI traffic or pedestrians
 - Night mode with lit windows (a glow map on the facades)
-- Streetlights and traffic lights
+- Streetlights, and visible traffic lights (the traffic already obeys invisible ones)
 - Simpler versions of far blocks (LOD) if mid-range phones struggle

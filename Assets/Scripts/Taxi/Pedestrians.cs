@@ -125,6 +125,13 @@ public class Pedestrians : MonoBehaviour
         return best < float.MaxValue;
     }
 
+    /// <summary>Where every waiting fare stands, for the minimap.</summary>
+    public void GetFares(List<Vector3> into)
+    {
+        foreach (var p in people)
+            if (p.fare) into.Add(SidewalkPoint(p.block, p.u, FareInset, out _, out _));
+    }
+
     /// <summary>If a fare is within radius, they get in: true, and a new fare appears somewhere else.</summary>
     public bool TryPickUp(Vector3 carPos, float radius)
     {

@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 /// Mouse: hold right button and drag to orbit (or always, if Hold Right Mouse is off), scroll to zoom.
 /// Gamepad: right stick to orbit, bumpers to zoom.
 /// Swings back behind the target on its own after you stop moving the camera.
-/// Pulls in when a building gets between it and the target.
+/// Pulls in when a building gets between it and the target (not for cars and other rigidbodies).
 /// </summary>
 public class ThirdPersonCamera : MonoBehaviour
 {
@@ -100,6 +100,7 @@ public class ThirdPersonCamera : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             if (hits[i].transform.IsChildOf(target.root)) continue;
+            if (hits[i].rigidbody != null) continue;   // traffic and other moving things; only buildings pull the camera in
             if (hits[i].distance > 0f)
                 allowed = Mathf.Min(allowed, hits[i].distance);
         }

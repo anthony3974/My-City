@@ -95,6 +95,13 @@ public class TaxiGame : MonoBehaviour
 
     float Speed => body ? body.linearVelocity.magnitude : 0f;
 
+    /// <summary>For the minimap: true and the drop-off point while someone is in the taxi.</summary>
+    public bool TryGetDropOff(out Vector3 point)
+    {
+        point = passenger && people != null ? DropPoint() : default;
+        return passenger && people != null;
+    }
+
     Vector3 DropPoint()
     {
         float len = people.SideLength(DropInset);

@@ -58,6 +58,9 @@ public class CityStreamer : MonoBehaviour
     float statTime, statWorst;
     int statFrames;
 
+    /// <summary>Grid cell of the tile that currently sits at (0,0,0). Moves when the origin shifts.</summary>
+    public Vector2Int OriginCell => originCell;
+
     float T => settings.TileSize;
     static bool LogStats => Debug.isDebugBuild && !Application.isEditor;   // development builds on a device
 
