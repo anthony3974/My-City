@@ -104,8 +104,9 @@ public class PlayerCar : MonoBehaviour
             // Unity's cylinder is 1 wide and 2 tall along Y; it is turned on its side by the controller.
             var tireGo = Part(PrimitiveType.Cylinder, "Tire", pivot, Vector3.zero, new Vector3(diameter, 0.15f, diameter), tire);
             tireGo.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-            // A spoke poking out of the tyre so you can see it spin.
+            // Two crossed spokes ("+") poking out of the tyre so you can see it spin.
             Part(PrimitiveType.Cube, "Rim", tireGo.transform, Vector3.zero, new Vector3(0.6f, 2.15f, 0.15f), rim);
+            Part(PrimitiveType.Cube, "Rim", tireGo.transform, Vector3.zero, new Vector3(0.15f, 2.15f, 0.6f), rim);
 
             controller.wheels[i] = new CarController.Wheel
             {

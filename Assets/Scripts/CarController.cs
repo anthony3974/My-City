@@ -34,21 +34,23 @@ public class CarController : MonoBehaviour
     public float springDamper = 3500f;
 
     [Header("Engine")]
-    public float motorForce = 10000f;
-    public float maxSpeed = 32f;          // m/s (about 115 km/h)
+    // Starting car: kept slow so upgrades have room to grow.
+    public float motorForce = 7000f;
+    public float maxSpeed = 24f;          // m/s (about 86 km/h)
     public float maxReverseSpeed = 10f;
     public float brakeForce = 16000f;
     public float rollingResistance = 0.12f;
     public float downforce = 3f;
 
     [Header("Steering")]
-    public float maxSteerAngle = 35f;
-    public float highSpeedSteerAngle = 10f;
-    public float steerRate = 140f;        // degrees per second
+    // Starting car: lazy steering and weak grip, so better handling is earned.
+    public float maxSteerAngle = 30f;
+    public float highSpeedSteerAngle = 8f;
+    public float steerRate = 100f;        // degrees per second
 
     [Header("Grip (0-1, share of sideways slide removed each physics step)")]
-    [Range(0f, 1f)] public float frontGrip = 0.9f;
-    [Range(0f, 1f)] public float rearGrip = 0.85f;
+    [Range(0f, 1f)] public float frontGrip = 0.72f;
+    [Range(0f, 1f)] public float rearGrip = 0.68f;
     [Range(0f, 1f)] public float handbrakeRearGrip = 0.12f;
 
     [Header("Body")]
