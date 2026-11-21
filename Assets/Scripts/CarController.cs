@@ -72,6 +72,10 @@ public class CarController : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         foreach (var w in wheels)
             w.suspensionLength = restLength;
+
+        // Cars spawned before crash feedback existed don't have it yet.
+        if (!GetComponent<CrashFeedback>())
+            gameObject.AddComponent<CrashFeedback>();
     }
 
     void Update()

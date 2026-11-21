@@ -43,6 +43,13 @@ public class ThirdPersonCamera : MonoBehaviour
     public float collisionRadius = 0.3f;
     public LayerMask collisionMask = ~0;
 
+    [Header("Shake")]
+    public float shakeMove = 0.25f;         // metres at full shake
+    public float shakeAngle = 2.5f;         // degrees at full shake
+    public float shakeFrequency = 18f;
+    public float shakeDecay = 4f;           // how fast it dies away
+
+    float shake;
     float yaw;
     float currentDistance;
     float lastInputTime = -100f;
@@ -102,13 +109,32 @@ public class ThirdPersonCamera : MonoBehaviour
             ? allowed
             : Mathf.Lerp(currentDistance, allowed, 1f - Mathf.Exp(-4f * dt));
 
-        transform.SetPositionAndRotation(focus + back * currentDistance, rot);
+        Vector3 pos = focus + back * currentDistance;
+        if (shake > 0.001f)
+        {
+            // Perlin noise keeps the shake smooth; squaring makes small shakes subtle.
+            float s = shake * shake;
+            float t = Time.unscaledTime * shakeFrequency;
+            float nx = Mathf.PerlinNoise(t, 0.1f) * 2f - 1f;
+            float ny = Mathf.PerlinNoise(0.3f, t) * 2f - 1f;
+            float nr = Mathf.PerlinNoise(t, 7.7f) * 2f - 1f;
+            pos += rot * new Vector3(nx, ny, 0f) * (shakeMove * s);
+            rot *= Quaternion.Euler(ny * shakeAngle * s, nx * shakeAngle * s, nr * shakeAngle * s);
+            shake = Mathf.MoveTowards(shake, 0f, shakeDecay * shake * Time.unscaledDeltaTime + 0.2f * Time.unscaledDeltaTime);
+        }
+        transform.SetPositionAndRotation(pos, rot);
 
         if (cam != null)
         {
             float fov = Mathf.Lerp(baseFov, maxFov, Mathf.Clamp01(speed / fovAtSpeed));
             cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, fov, 1f - Mathf.Exp(-3f * dt));
         }
+    }
+
+    /// <summary>Shakes the camera. Strength 0-1; a bigger shake replaces a smaller one.</summary>
+    public void Shake(float strength)
+    {
+        shake = Mathf.Clamp01(Mathf.Max(shake, strength));
     }
 
     /// <summary>Called when the world is moved back towards the origin, so the camera moves with it without smoothing.</summary>
