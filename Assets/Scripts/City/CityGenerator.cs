@@ -9,6 +9,7 @@ public enum CityMat
     BrickRed, BrickTan, Stone, Plaster, PlasterGrey, Office,
     GlassBlue, GlassTeal, GlassDark, GlassSilver,
     Roof, Metal, Grass, Trunk, Leaves,
+    TrafficPole, TrafficYellow, TrafficDark,
     Count
 }
 
@@ -50,8 +51,8 @@ public static class CityLook
     // Traffic light geometry constants shared with Traffic.cs so glowing lenses align with the static housings.
     public const float TrafficLightInset = 0.7f;
     public const float TrafficLightHousingY = 4.72f;
-    public const float TrafficLightHousingDepth = 0.34f;
-    public const float TrafficLightLensSpacing = 0.32f;
+    public const float TrafficLightHousingDepth = 0.26f;
+    public const float TrafficLightLensSpacing = 0.31f;
 
     public static bool IsFacade(CityMat m) => m >= CityMat.Storefront && m <= CityMat.GlassSilver;
 
@@ -288,16 +289,18 @@ public static class CityGenerator
 
         /// <summary>
         /// Mast-arm traffic light poles at all four block corners, hanging out over the far-right lane of each
-        /// adjacent intersection. Traffic.cs draws the live glowing red/yellow/green lenses on these housings.
+        /// adjacent intersection. Uses dark painted steel poles, yellow signal bodies, matte-black contrast
+        /// backplates and individual hooded visors. Traffic.cs draws the live glowing circular LED lenses.
         /// </summary>
         void BuildTrafficLights()
         {
             float h = s.blockSize * 0.5f;
             float inset = CityLook.TrafficLightInset;
             float overhang = s.roadWidth * 0.25f;   // distance from curb to lane centre
-            float armReach = inset + overhang + 0.45f;
-            const float poleH = 5.3f;
-            const float armY = 5.36f;
+            float armReach = inset + overhang + 0.36f;
+            const float armY = 5.38f;
+            float depth = CityLook.TrafficLightHousingDepth;
+            float spacing = CityLook.TrafficLightLensSpacing;
 
             for (int dir = 0; dir < 4; dir++)
             {
@@ -305,28 +308,72 @@ public static class CityGenerator
                 Vector3 right = LightDirs[(dir + 1) & 3];
                 Vector3 poleXZ = (-fwd - right) * (h - inset);
 
-                // Vertical pole + base collar on the sidewalk corner.
-                Box(poleXZ + Vector3.up * (0.2f + poleH * 0.5f), new Vector3(0.22f, poleH, 0.22f),
-                    CityMat.Metal, CityMat.Metal, collider: false);
-                Box(poleXZ + Vector3.up * 0.38f, new Vector3(0.36f, 0.36f, 0.36f),
-                    CityMat.Metal, CityMat.Metal, collider: false);
+                // Slim tapered dark steel pole + neat base flange + top cap.
+                Box(poleXZ + Vector3.up * 0.26f, new Vector3(0.26f, 0.12f, 0.26f),
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false);
+                Box(poleXZ + Vector3.up * 1.55f, new Vector3(0.16f, 2.5f, 0.16f),
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false);
+                Box(poleXZ + Vector3.up * 4.18f, new Vector3(0.13f, 2.78f, 0.13f),
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false);
+                Box(poleXZ + Vector3.up * 5.60f, new Vector3(0.18f, 0.08f, 0.18f),
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false);
 
-                // Horizontal mast arm extending over the road lane (along -right).
+                // Small dark utility / controller box on the lower pole shaft.
+                Box(poleXZ + fwd * 0.14f + Vector3.up * 1.45f,
+                    AbsVec(right * 0.22f + fwd * 0.14f) + Vector3.up * 0.38f,
+                    CityMat.TrafficDark, CityMat.TrafficDark, collider: false);
+
+                // Slim horizontal steel mast arm + mounting collar + angled gusset bracket.
                 Vector3 armCenter = poleXZ - right * (armReach * 0.5f) + Vector3.up * armY;
-                Vector3 armSize = AbsVec(right * armReach + fwd * 0.16f) + Vector3.up * 0.16f;
-                Box(armCenter, armSize, CityMat.Metal, CityMat.Metal, collider: false, bottom: true);
+                Vector3 armSize = AbsVec(right * armReach + fwd * 0.11f) + Vector3.up * 0.11f;
+                Box(armCenter, armSize, CityMat.TrafficPole, CityMat.TrafficPole, collider: false, bottom: true);
+                Box(poleXZ - right * 0.12f + Vector3.up * (armY - 0.08f),
+                    AbsVec(right * 0.26f + fwd * 0.18f) + Vector3.up * 0.26f,
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false, bottom: true);
+                Box(poleXZ - right * 0.55f + Vector3.up * (armY - 0.14f),
+                    AbsVec(right * 0.65f + fwd * 0.08f) + Vector3.up * 0.08f,
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false, bottom: true);
 
-                // Signal head housing hanging beneath the mast arm, facing -fwd toward approaching traffic.
+                // Signal head hanging beneath the mast arm, facing -fwd toward approaching traffic.
                 Vector3 headXZ = poleXZ - right * (inset + overhang);
-                Vector3 headSize = AbsVec(right * 0.42f + fwd * CityLook.TrafficLightHousingDepth) + Vector3.up * 1.12f;
-                Box(headXZ + Vector3.up * CityLook.TrafficLightHousingY, headSize,
-                    CityMat.Metal, CityMat.Metal, collider: false, bottom: true);
+                float hy = CityLook.TrafficLightHousingY;
 
-                // Small top hood/visor over the signal head.
-                Vector3 visorCenter = headXZ - fwd * (CityLook.TrafficLightHousingDepth * 0.5f + 0.11f)
-                    + Vector3.up * (CityLook.TrafficLightHousingY + 0.53f);
-                Vector3 visorSize = AbsVec(right * 0.44f + fwd * 0.22f) + Vector3.up * 0.06f;
-                Box(visorCenter, visorSize, CityMat.Metal, CityMat.Metal, collider: false, bottom: true);
+                // Vertical hanger bracket connecting the arm to the top of the signal housing.
+                Box(headXZ + Vector3.up * (armY - 0.08f),
+                    AbsVec(right * 0.10f + fwd * 0.10f) + Vector3.up * 0.18f,
+                    CityMat.TrafficPole, CityMat.TrafficPole, collider: false);
+
+                // Matte-black contrast backplate framing the housing.
+                Box(headXZ + fwd * 0.06f + Vector3.up * hy,
+                    AbsVec(right * 0.52f + fwd * 0.04f) + Vector3.up * 1.18f,
+                    CityMat.TrafficDark, CityMat.TrafficDark, collider: false, bottom: true);
+
+                // Classic traffic-signal yellow body.
+                Box(headXZ + Vector3.up * hy,
+                    AbsVec(right * 0.36f + fwd * depth) + Vector3.up * 1.04f,
+                    CityMat.TrafficYellow, CityMat.TrafficYellow, collider: false, bottom: true);
+
+                // Matte-black front faceplate where the three lenses sit.
+                Box(headXZ - fwd * (depth * 0.5f + 0.006f) + Vector3.up * hy,
+                    AbsVec(right * 0.30f + fwd * 0.015f) + Vector3.up * 0.96f,
+                    CityMat.TrafficDark, CityMat.TrafficDark, collider: false);
+
+                // Three individual hooded visors (top brow + side shields) for red, yellow and green.
+                for (int lamp = -1; lamp <= 1; lamp++)
+                {
+                    float ly = hy + lamp * spacing;
+                    // Top curved-style brow sticking out over each lamp.
+                    Box(headXZ - fwd * (depth * 0.5f + 0.095f) + Vector3.up * (ly + 0.115f),
+                        AbsVec(right * 0.24f + fwd * 0.18f) + Vector3.up * 0.026f,
+                        CityMat.TrafficDark, CityMat.TrafficDark, collider: false, bottom: true);
+                    // Side glare shields framing each lamp.
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        Box(headXZ - fwd * (depth * 0.5f + 0.065f) + right * (0.112f * side) + Vector3.up * (ly + 0.02f),
+                            AbsVec(right * 0.024f + fwd * 0.12f) + Vector3.up * 0.17f,
+                            CityMat.TrafficDark, CityMat.TrafficDark, collider: false);
+                    }
+                }
             }
         }
 

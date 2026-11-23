@@ -80,6 +80,9 @@ public static class CityTextureBaker
         mats[(int)CityMat.Grass] = M("Grass", "Grass", Color.white);
         mats[(int)CityMat.Trunk] = M("Trunk", "Trunk", Color.white);
         mats[(int)CityMat.Leaves] = M("Leaves", "Leaves", Color.white);
+        mats[(int)CityMat.TrafficPole] = MakeMaterial("TrafficPole", null, null, new Color(0.14f, 0.16f, 0.19f), 1f, 0.65f);
+        mats[(int)CityMat.TrafficYellow] = MakeMaterial("TrafficYellow", null, null, new Color(0.95f, 0.68f, 0.06f), 1f, 0.55f);
+        mats[(int)CityMat.TrafficDark] = MakeMaterial("TrafficDark", null, null, new Color(0.05f, 0.05f, 0.06f), 1f, 0.25f);
 
         AssetDatabase.SaveAssets();
         return mats;

@@ -6,8 +6,8 @@ using UnityEngine.InputSystem;
 /// sideways grip and drive/brake forces. Works on any collider (roads, curbs, ramps).
 ///
 /// Keyboard: W/S or Up/Down = gas/brake/reverse, A/D or Left/Right = steer,
-///           Space = handbrake, R = flip upright.
-/// Gamepad:  RT/LT = gas/brake, left stick = steer, A = handbrake, Y = reset.
+///           Space = handbrake/drift, R = flip upright.
+/// Gamepad:  RT/LT = gas/brake, left stick = steer, A = handbrake/drift, Y = reset.
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 public class CarController : MonoBehaviour
@@ -43,31 +43,36 @@ public class CarController : MonoBehaviour
     public float downforce = 3f;
 
     [Header("Steering")]
-    // Starting car: slower speed-sensitive steering and loose grip, so better handling is earned.
+    // Starting car: speed-sensitive steering and loose grip, so better handling is earned.
     public float maxSteerAngle = 28f;
-    public float highSpeedSteerAngle = 4.5f;
-    public float steerRate = 85f;         // degrees per second at low speed; slows down at high speed
+    public float highSpeedSteerAngle = 5f;
+    public float steerRate = 90f;         // degrees per second at low speed; slows down at high speed
     [Tooltip("Speed (m/s) where steering reaches its high-speed limit.")]
     public float steerSpeedRef = 30f;
 
     [Header("Grip (0-1, share of sideways slide removed each physics step)")]
     [Range(0f, 1f)] public float frontGrip = 0.72f;
     [Range(0f, 1f)] public float rearGrip = 0.68f;
-    [Range(0f, 1f)] public float handbrakeRearGrip = 0.25f;
+    [Range(0f, 1f)] public float handbrakeRearGrip = 0.05f;
 
     [Header("Drift")]
-    [Tooltip("Front grip multiplier while handbrake-drifting so the whole car sweeps smoothly instead of pivoting.")]
-    [Range(0.2f, 1f)] public float driftFrontGripScale = 0.62f;
+    [Tooltip("Lateral force limit (in Gs) per front/rear axle while drifting, so drifts stretch across long sweeping corners.")]
+    public float driftFrontMaxG = 0.68f;
+    public float driftRearMaxG = 0.36f;
     [Tooltip("Maximum steady drift slip angle (degrees) before self-stabilising assist reins in a spinout.")]
     public float maxDriftSlipAngle = 36f;
+    [Tooltip("Minimum steering angle available while handbrake-drifting so you can initiate and counter-steer at speed.")]
+    public float driftMinSteerAngle = 15f;
 
     [Header("Body")]
     public Vector3 centerOfMass = new Vector3(0f, 0.45f, 0f);
 
     Rigidbody rb;
     CarDamage damage;
+    ParticleSystem tireSmoke;
     float throttleInput, steerInput, currentSteer;
     float driftBlend;   // smooth 0-1 blend into and out of handbrake drift
+    float smokeCarry;
     bool handbrake;
     readonly RaycastHit[] hits = new RaycastHit[8];
 
@@ -91,12 +96,19 @@ public class CarController : MonoBehaviour
         damage = GetComponent<CarDamage>();
         if (!damage)
             damage = gameObject.AddComponent<CarDamage>();
+        tireSmoke = CreateTireSmoke();
+    }
+
+    void OnDestroy()
+    {
+        if (tireSmoke) Destroy(tireSmoke.gameObject);
     }
 
     void Update()
     {
         ReadInput();
         UpdateWheelVisuals();
+        UpdateTireSmoke();
     }
 
     void ReadInput()
@@ -155,37 +167,49 @@ public class CarController : MonoBehaviour
         bool wrecked = damage != null && damage.Wrecked;
         float damageSpeedScale = damage != null ? damage.EngineScale : 1f;
 
-        // Speed-sensitive steering: steer angle narrows with a smooth curve as speed builds,
-        // and turning into a corner gets progressively slower at high speed (returning to centre stays responsive).
+        // Compute slip angle from current velocity.
+        Vector3 flatVel = Shapes.Flat(rb.linearVelocity);
+        float flatSpeed = flatVel.magnitude;
+        float slipSigned = flatSpeed > 3.5f ? Vector3.SignedAngle(Shapes.Flat(transform.forward), flatVel, Vector3.up) : 0f;
+        DriftAngle = Mathf.Abs(slipSigned);
+
+        // Speed-sensitive steering: narrows and slows down at high speed during normal driving.
+        // Holding handbrake unlocks enough steering angle to kick out and counter-steer smoothly.
         float speedNorm = Mathf.Clamp01(absSpeed / Mathf.Max(1f, steerSpeedRef));
         float steerCurve = Mathf.Sqrt(speedNorm);
         float maxAngleNow = Mathf.Lerp(maxSteerAngle, highSpeedSteerAngle, steerCurve);
-        // Smooth out drift steering so handbrake stretches a corner into a long sweeping drift instead of a snap U-turn.
-        driftBlend = Mathf.MoveTowards(driftBlend, handbrake && absSpeed > 5f ? 1f : 0f, dt * (handbrake ? 5f : 2.8f));
+
+        bool wantDrift = !wrecked && handbrake && flatSpeed > 5f;
+        // Enter drift promptly, but blend grip back gently over ~0.6 s when releasing Space so the tires
+        // never snap-grip and whip the car sideways into the curb.
+        driftBlend = Mathf.MoveTowards(driftBlend, wantDrift ? 1f : 0f, dt * (wantDrift ? 8f : 1.65f));
         if (driftBlend > 0.01f)
-            maxAngleNow *= Mathf.Lerp(1f, 0.78f, driftBlend * speedNorm);
+            maxAngleNow = Mathf.Lerp(maxAngleNow, Mathf.Max(maxAngleNow, driftMinSteerAngle), driftBlend);
 
         float targetSteer = wrecked ? 0f : steerInput * maxAngleNow;
         bool returning = Mathf.Abs(targetSteer) < Mathf.Abs(currentSteer) || Mathf.Sign(targetSteer) != Mathf.Sign(currentSteer);
-        float speedRateScale = Mathf.Lerp(1f, 0.34f, speedNorm);
-        float effectiveRate = steerRate * (returning ? Mathf.Lerp(1.1f, 0.75f, speedNorm) : speedRateScale);
-        currentSteer = Mathf.MoveTowards(currentSteer, targetSteer, effectiveRate * dt);
-
-        // Compute slip angle and drift state for both drift assist and metrics.
-        Vector3 flatVel = Shapes.Flat(rb.linearVelocity);
-        float flatSpeed = flatVel.magnitude;
-        float slipSigned = flatSpeed > 4f ? Vector3.SignedAngle(Shapes.Flat(transform.forward), flatVel, Vector3.up) : 0f;
-        DriftAngle = Mathf.Abs(slipSigned);
+        float speedRateScale = Mathf.Lerp(1f, 0.38f, speedNorm);
+        float rateScale = driftBlend > 0.1f ? Mathf.Lerp(speedRateScale, 1.05f, driftBlend)
+            : (returning ? Mathf.Lerp(1.1f, 0.78f, speedNorm) : speedRateScale);
+        currentSteer = Mathf.MoveTowards(currentSteer, targetSteer, steerRate * rateScale * dt);
 
         float massPerWheel = rb.mass / wheels.Length;
         bool braking = !wrecked && ((throttleInput > 0.05f && speed < -0.5f) || (throttleInput < -0.05f && speed > 0.5f));
+        // Straight-line handbrake slows the car decisively; steering/drifting with handbrake keeps momentum alive.
+        bool straightHandbrake = !wrecked && handbrake && Mathf.Abs(steerInput) < 0.12f && DriftAngle < 10f;
         int groundedCount = 0;
         Vector3 up = transform.up;
 
-        // Grip values: during a drift, rear loosens moderately (not to zero) and front eases slightly
-        // so the car glides around a wide arc instead of pivoting around the nose.
-        float activeFrontGrip = Mathf.Lerp(frontGrip, frontGrip * driftFrontGripScale, driftBlend);
+        // Lateral grip and friction-circle saturation:
+        // Low rear grip kicks the tail out; realistic G caps prevent snap-oversteer when releasing Space.
+        // Smoothly lerp between normal tire saturation (~2.2 G) and drift saturation so recovery is gradual.
+        float activeFrontGrip = Mathf.Lerp(frontGrip, Mathf.Min(frontGrip, 0.32f), driftBlend);
         float activeRearGrip = Mathf.Lerp(rearGrip, handbrakeRearGrip, driftBlend);
+        float normalCap = 2.2f * rb.mass * 9.81f * 0.25f;            // per wheel when gripping normally
+        float frontCap = driftFrontMaxG * rb.mass * 9.81f * 0.5f;   // per front wheel while drifting
+        float rearCap = driftRearMaxG * rb.mass * 9.81f * 0.5f;     // per rear wheel while drifting
+        float frontLimit = Mathf.Lerp(normalCap, frontCap, driftBlend);
+        float rearLimit = Mathf.Lerp(normalCap, rearCap, driftBlend);
 
         foreach (var w in wheels)
         {
@@ -215,14 +239,22 @@ public class CarController : MonoBehaviour
 
             float sideVel = Vector3.Dot(right, wheelVel);
             float grip = w.front ? activeFrontGrip : activeRearGrip;
-            rb.AddForceAtPosition(-right * sideVel * grip * massPerWheel / dt, forcePoint);
+            float sideForce = -sideVel * grip * massPerWheel / dt;
+            float cap = w.front ? frontLimit : rearLimit;
+            sideForce = Mathf.Clamp(sideForce, -cap, cap);
+            rb.AddForceAtPosition(right * sideForce, forcePoint);
 
             float fwdVel = Vector3.Dot(fwd, wheelVel);
             float force;
             if (wrecked)
             {
-                // Engine is dead: coast to a stop with extra rolling drag (or brake if pressed).
                 force = -fwdVel * massPerWheel * (handbrake ? 1.8f : 0.65f);
+            }
+            else if (straightHandbrake)
+            {
+                // Pulling handbrake while going straight brakes cleanly instead of being overpowered by throttle.
+                force = -Mathf.Sign(fwdVel) * (w.front ? brakeForce * 0.15f : brakeForce * 0.55f) / wheels.Length;
+                if (Mathf.Abs(fwdVel) < 0.8f) force = -fwdVel * massPerWheel * 4f;
             }
             else if (braking)
             {
@@ -232,42 +264,67 @@ public class CarController : MonoBehaviour
             {
                 float limit = (throttleInput > 0f ? maxSpeed : maxReverseSpeed) * damageSpeedScale;
                 float power = 1f - Mathf.Clamp01(absSpeed / Mathf.Max(1f, limit));
-                force = throttleInput * (motorForce * damageSpeedScale) / wheels.Length * Mathf.Sqrt(power);
+                float driftDriveScale = driftBlend > 0.01f ? Mathf.Lerp(1f, 0.82f, driftBlend) : 1f;
+                force = throttleInput * (motorForce * damageSpeedScale * driftDriveScale) / wheels.Length * Mathf.Sqrt(power);
             }
             else
             {
                 force = -fwdVel * rollingResistance * massPerWheel;
             }
 
-            // Light rear drag during handbrake so the car keeps enough speed to carry a long sweeping drift.
-            if (!wrecked && handbrake && !w.front)
-                force = Mathf.Min(force, 0f) - fwdVel * massPerWheel * 0.24f;
+            if (!wrecked && handbrake && !straightHandbrake && !w.front)
+                force = -fwdVel * massPerWheel * 0.22f;
 
             rb.AddForceAtPosition(fwd * force, forcePoint);
 
-            w.spin += fwdVel / wheelRadius * Mathf.Rad2Deg * dt;
+            w.spin += (handbrake && !w.front ? fwdVel * 0.2f : fwdVel) / wheelRadius * Mathf.Rad2Deg * dt;
         }
 
-        IsDrifting = groundedCount >= 2 && flatSpeed > 7.5f && DriftAngle > 13f && speed > 4f;
+        IsDrifting = groundedCount >= 2 && flatSpeed > 6.5f && DriftAngle > 12f && speed > 3f;
 
         if (groundedCount > 0)
         {
             rb.AddForce(-up * downforce * speed * speed);
 
-            // Drift yaw damping and slip-angle limiter: prevents the handbrake from acting like a 180° U-turn button
-            // and holds a smooth, modern sweeping drift angle through long corners.
-            if (driftBlend > 0.05f || DriftAngle > 15f)
+            // Drift control: gently kick the tail out when initiating Space + steer, cap over-rotation so
+            // it holds a sweeping 25-36° angle around corners, and smoothly straighten the nose back toward
+            // the travel direction on exit so releasing Space never whips the car sideways into the curb.
+            if (driftBlend > 0.05f || DriftAngle > 4f)
             {
                 float yawRate = Vector3.Dot(rb.angularVelocity, up);
-                float damp = Mathf.Lerp(0.4f, 2.1f, driftBlend);
-                rb.AddTorque(-up * yawRate * rb.inertiaTensor.y * damp, ForceMode.Force);
+                float iy = Mathf.Max(1500f, rb.inertiaTensor.y);
 
-                float excessSlip = DriftAngle - maxDriftSlipAngle;
-                if (excessSlip > 0f && speed > 4f)
+                // Smoothly kick the tail out into the turn when pressing Space + steer from straight driving.
+                if (wantDrift && driftBlend > 0.2f && Mathf.Abs(steerInput) > 0.15f && DriftAngle < 26f && speed > 6f)
                 {
-                    // Gently turn the nose back toward the velocity vector to stop spinouts.
+                    float kick = steerInput * (1f - DriftAngle / 26f) * iy * 2.2f * driftBlend;
+                    rb.AddTorque(up * kick, ForceMode.Force);
+                }
+
+                // When exiting a drift (Space released), gently align the car's nose back to its velocity vector
+                // (critically damped) so the tail tucks cleanly behind you instead of snapping sideways.
+                if (!wantDrift && DriftAngle > 3f && speed > 4f)
+                {
+                    float slipRad = slipSigned * Mathf.Deg2Rad;
+                    float exitStrength = Mathf.Lerp(0.55f, 1f, Mathf.Clamp01(1f - Mathf.Abs(steerInput)));
+                    float alignTorque = (slipRad * 11f - yawRate * 5.8f) * iy * exitStrength;
+                    rb.AddTorque(up * alignTorque, ForceMode.Force);
+                }
+
+                // Cap maximum yaw rate during a drift so a 90° corner sweeps smoothly over ~1.8-2.5 s.
+                const float maxDriftYaw = 1.25f;   // rad/s (~72 deg/s)
+                if (driftBlend > 0.05f && Mathf.Abs(yawRate) > maxDriftYaw)
+                {
+                    float excess = yawRate - Mathf.Sign(yawRate) * maxDriftYaw;
+                    rb.AddTorque(-up * excess * iy * 5f, ForceMode.Force);
+                }
+
+                // Self-stabilising assist past maxDriftSlipAngle so the car holds the drift instead of spinning out.
+                float excessSlip = DriftAngle - maxDriftSlipAngle;
+                if (excessSlip > 0f && speed > 3f)
+                {
                     float restoreDir = Mathf.Sign(slipSigned);
-                    float restoreTorque = restoreDir * Mathf.Clamp01(excessSlip / 25f) * rb.inertiaTensor.y * 5.5f;
+                    float restoreTorque = restoreDir * Mathf.Clamp01(excessSlip / 20f) * iy * 7.5f;
                     rb.AddTorque(up * restoreTorque, ForceMode.Force);
                 }
             }
@@ -303,6 +360,73 @@ public class CarController : MonoBehaviour
             if (w.mesh != null)
                 w.mesh.localRotation = Quaternion.Euler(w.spin % 360f, 0f, 0f) * Quaternion.Euler(0f, 0f, 90f);
         }
+    }
+
+    void UpdateTireSmoke()
+    {
+        if (!tireSmoke || wheels == null) return;
+        float flatSpeed = Shapes.Flat(rb.linearVelocity).magnitude;
+        bool smoking = (IsDrifting || (handbrake && flatSpeed > 5f)) && (damage == null || !damage.Wrecked);
+        if (!smoking) return;
+
+        float intensity = IsDrifting ? Mathf.Clamp01(DriftAngle / 30f) : 0.65f;
+        smokeCarry += Mathf.Lerp(14f, 34f, intensity) * Time.deltaTime;
+        int count = (int)smokeCarry;
+        smokeCarry -= count;
+        if (count <= 0) return;
+
+        var p = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+        foreach (var w in wheels)
+        {
+            if (w.front || !w.grounded || w.pivot == null) continue;
+            Vector3 contact = w.pivot.position - transform.up * (wheelRadius * 0.85f);
+            for (int i = 0; i < count; i++)
+            {
+                p.position = contact + Random.insideUnitSphere * 0.14f;
+                p.velocity = Vector3.up * Random.Range(0.4f, 1.1f) + Random.insideUnitSphere * 0.45f;
+                p.startLifetime = Random.Range(0.35f, 0.7f);
+                p.startSize = Random.Range(0.24f, 0.45f);
+                float g = Random.Range(0.76f, 0.9f);
+                p.startColor = new Color(g, g, g, 1f);
+                tireSmoke.Emit(p, 1);
+            }
+        }
+    }
+
+    static ParticleSystem CreateTireSmoke()
+    {
+        var mat = Resources.Load<Material>("CrashSparks");
+        if (mat == null) return null;
+
+        var go = new GameObject("Drift Smoke");
+        var ps = go.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        var main = ps.main;
+        main.loop = true;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.gravityModifier = -0.06f;
+        main.maxParticles = 180;
+
+        var emission = ps.emission;
+        emission.enabled = false;
+        var shape = ps.shape;
+        shape.enabled = false;
+
+        var size = ps.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+            new Keyframe(0f, 0.55f), new Keyframe(0.3f, 1.35f), new Keyframe(1f, 0f)));
+
+        var r = go.GetComponent<ParticleSystemRenderer>();
+        r.sharedMaterial = mat;
+        r.renderMode = ParticleSystemRenderMode.Billboard;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
+
+        ps.Play();
+        return ps;
     }
 
     public void ResetCar()

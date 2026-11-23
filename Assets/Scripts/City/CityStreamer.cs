@@ -56,6 +56,7 @@ public class CityStreamer : MonoBehaviour
     Rigidbody carBody;
     Transform horizon;
     Mesh horizonMesh;
+    readonly List<Material> runtimeMaterials = new();
 
     // Development-build stats.
     float statTime, statWorst;
@@ -69,6 +70,7 @@ public class CityStreamer : MonoBehaviour
 
     void Awake()
     {
+        EnsureRuntimeMaterials();
         if (car == null) car = PlayerCar.Create(materials[(int)CityMat.WhitePaint]).transform;
         if (followCamera == null && Camera.main != null) followCamera = Camera.main.GetComponent<ThirdPersonCamera>();
         if (followCamera != null && followCamera.target == null) followCamera.target = car;
@@ -109,10 +111,34 @@ public class CityStreamer : MonoBehaviour
         if (LogStats) Stats();
     }
 
+    void EnsureRuntimeMaterials()
+    {
+        int need = (int)CityMat.Count;
+        if (materials == null || materials.Length < need)
+            System.Array.Resize(ref materials, need);
+
+        var baseMat = materials[(int)CityMat.WhitePaint];
+        if (baseMat == null) return;
+
+        void Fill(CityMat slot, Color color, float smoothness, string name)
+        {
+            if (materials[(int)slot] != null) return;
+            var m = Shapes.Tinted(baseMat, color, smoothness, name);
+            materials[(int)slot] = m;
+            runtimeMaterials.Add(m);
+        }
+
+        Fill(CityMat.TrafficPole, new Color(0.14f, 0.16f, 0.19f), 0.65f, "City_TrafficPole");
+        Fill(CityMat.TrafficYellow, new Color(0.95f, 0.68f, 0.06f), 0.55f, "City_TrafficYellow");
+        Fill(CityMat.TrafficDark, new Color(0.05f, 0.05f, 0.06f), 0.25f, "City_TrafficDark");
+    }
+
     void OnDestroy()
     {
         foreach (var t in tiles.Values) Unload(t);
         tiles.Clear();
+        foreach (var m in runtimeMaterials) Destroy(m);
+        runtimeMaterials.Clear();
         Destroy(horizonMesh);
     }
 

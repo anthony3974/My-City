@@ -554,8 +554,8 @@ public class Traffic : MonoBehaviour
         int rangeBlocks = Mathf.CeilToInt(lightDrawRadius / pitch);
         float maxDist2 = lightDrawRadius * lightDrawRadius;
         float halfRoad = roadWidth * 0.5f;
-        float frontOff = CityLook.TrafficLightHousingDepth * 0.5f + 0.025f;
-        const float lensHalf = 0.125f;
+        float frontOff = CityLook.TrafficLightHousingDepth * 0.5f + 0.022f;
+        const float lensRadius = 0.095f;
 
         for (int ix = cx - rangeBlocks; ix <= cx + rangeBlocks; ix++)
         {
@@ -568,17 +568,19 @@ public class Traffic : MonoBehaviour
                 for (int dir = 0; dir < 4; dir++)
                 {
                     LightState state = LightAt(node, dir);
-                    int idx = (int)state;
-                    float yOff = state == LightState.Red ? CityLook.TrafficLightLensSpacing
-                        : state == LightState.Green ? -CityLook.TrafficLightLensSpacing : 0f;
-
                     Vector3 fwd = Dirs[dir];
                     Vector3 right = Right(dir);
-                    Vector3 pos = ctr + fwd * (halfRoad + CityLook.TrafficLightInset - frontOff)
-                        + right * lane
-                        + Vector3.up * (CityLook.TrafficLightHousingY + yOff);
+                    Vector3 faceBase = ctr + fwd * (halfRoad + CityLook.TrafficLightInset - frontOff)
+                        + right * lane + Vector3.up * CityLook.TrafficLightHousingY;
 
-                    AddLensQuad(idx, pos, right, -fwd, lensHalf);
+                    // Draw all three circular lenses: active lamp bright, inactive lamps dimly tinted so the
+                    // three-light layout reads cleanly even from a distance.
+                    AddLensDisc(0, faceBase + Vector3.up * CityLook.TrafficLightLensSpacing, right, -fwd, lensRadius,
+                        state == LightState.Red ? 1f : 0.14f);
+                    AddLensDisc(1, faceBase, right, -fwd, lensRadius,
+                        state == LightState.Yellow ? 1f : 0.14f);
+                    AddLensDisc(2, faceBase - Vector3.up * CityLook.TrafficLightLensSpacing, right, -fwd, lensRadius,
+                        state == LightState.Green ? 1f : 0.14f);
                 }
             }
         }
@@ -597,22 +599,35 @@ public class Traffic : MonoBehaviour
         }
     }
 
-    void AddLensQuad(int idx, Vector3 center, Vector3 right, Vector3 normal, float half)
+    void AddLensDisc(int idx, Vector3 center, Vector3 right, Vector3 normal, float radius, float brightness)
     {
+        const int sides = 8;
         var v = lightVerts[idx];
         var n = lightNormals[idx];
         var col = lightColors[idx];
         var t = lightTris[idx];
-        int b = v.Count;
+        int c = v.Count;
+        Color tint = new(brightness, brightness, brightness, 1f);
 
-        Vector3 r = right * half, u = Vector3.up * half;
-        v.Add(center - r - u);
-        v.Add(center - r + u);
-        v.Add(center + r + u);
-        v.Add(center + r - u);
-        for (int k = 0; k < 4; k++) { n.Add(normal); col.Add(Color.white); }
-        t.Add(b); t.Add(b + 1); t.Add(b + 2);
-        t.Add(b); t.Add(b + 2); t.Add(b + 3);
+        v.Add(center);
+        n.Add(normal);
+        col.Add(tint);
+
+        for (int i = 0; i < sides; i++)
+        {
+            float a = i * Mathf.PI * 2f / sides;
+            v.Add(center + right * (Mathf.Cos(a) * radius) + Vector3.up * (Mathf.Sin(a) * radius));
+            n.Add(normal);
+            col.Add(tint);
+        }
+        // Winding: for normal = -fwd = Cross(+Y, right), clockwise from front is (center, i+1, i).
+        for (int i = 0; i < sides; i++)
+        {
+            int next = (i + 1) % sides;
+            t.Add(c);
+            t.Add(c + 1 + next);
+            t.Add(c + 1 + i);
+        }
     }
 
     // ------------------------------------------------------------------ Building the cars

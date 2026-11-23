@@ -127,8 +127,9 @@ public class PlayerCar : MonoBehaviour
 
         // Chassis split around four recessed wheel wells (front z: 0.88..1.82, rear z: -1.82..-0.88, y: 0.425..0.805)
         // so the tires sit inside real arches and never clip the yellow body even when steering or compressed.
+        // Underbody is inset on X/Y/Z so it never Z-fights with the outer yellow nose, tail, or wheel-well liners.
         Part(PrimitiveType.Cube, "Chassis", body, new Vector3(0f, 0.89f, 0f), new Vector3(1.9f, 0.17f, 4.2f), Paint);
-        Part(PrimitiveType.Cube, "Underbody", body, new Vector3(0f, 0.615f, 0f), new Vector3(1.04f, 0.38f, 4.2f), trimMat);
+        Part(PrimitiveType.Cube, "Underbody", body, new Vector3(0f, 0.61f, 0f), new Vector3(1.02f, 0.35f, 3.60f), trimMat);
         Part(PrimitiveType.Cube, "MidBody", body, new Vector3(0f, 0.615f, 0f), new Vector3(1.9f, 0.38f, 1.76f), Paint);
         frontNose = SaveRest(Part(PrimitiveType.Cube, "FrontNose", body, new Vector3(0f, 0.615f, 1.96f), new Vector3(1.9f, 0.38f, 0.28f), Paint).transform);
         rearTail = SaveRest(Part(PrimitiveType.Cube, "RearTail", body, new Vector3(0f, 0.615f, -1.96f), new Vector3(1.9f, 0.38f, 0.28f), Paint).transform);
