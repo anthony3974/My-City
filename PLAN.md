@@ -1,35 +1,24 @@
 # My City: improvement plan
 
-> **Note:** AI made the plan, not fully read by owner.
-
-## Feel
-1. **Crash feedback.** Camera shake, sparks or a short slowdown when the car hits a building.
-2. **Better HUD.** A speedometer dial and a minimap, drawn from the road layout the city generator already knows.
+> **Note:** AI made the plan, not fully read by owner. Completed and playtested items (1, 2, 4, 6, 7, 10, 11, 15, 16, 17, 29) have been removed; full history is in `git log -p PLAN.md`.
 
 ## Goals
 3. **Checkpoint runs.** A marker a few blocks away, a timer, and a saved best time (`PlayerPrefs`).
-4. **Deliveries or taxi fares.** Pick up at A, drop off at B, earn money.
 5. **Collectibles.** Coins or stars on the roads, placed from each tile's seed so they stay in the same spots.
-6. **Drift score.** Points for long handbrake drifts.
 
 ## Living city
-7. **AI traffic.** Simple cars that follow the lanes on the fixed road grid.
 8. **Day and night cycle.** Lit windows (glow map on the facades) and streetlights.
 9. **Variety.** Ramps, bridges, a highway or a river every few tiles.
 
 ## Polish
-10. **App icon.** It still uses Unity's default.
-11. **Plus-sign wheels.** Two crossed spokes ("+") on each wheel instead of the single bar, so the spin reads better (taxi in `PlayerCar.cs`, maybe traffic too).
 12. **Car choice or paint colour**, and a pause and settings menu (graphics quality, touch layout).
 13. **Tilt steering** as an option on phones.
-14. **Visible traffic lights.** The traffic already obeys lights; they just aren't drawn.
 
-## Progression
-15. **Slower starting car.** Lower the base top speed and acceleration so there is room to grow.
-16. **Less grip in corners at the start.** The car turns too easily now; start with weaker cornering so better handling is something you earn.
-17. **Upgrades bought with taxi money.** Speed (top speed, acceleration), brakes (brake force) and handling (grip, steering), each in a few levels with rising prices, saved in `PlayerPrefs`.
+## Playtest notes (23 Nov 2026)
+31. **Low-speed full stop.** When the vehicle is moving very slowly (e.g. ~1 km/h) with no throttle, bring it to a complete stop so it does not travel at 1 km/h forever.
 
-## Playtest notes (22 Nov 2026)
+## Built, not yet marked tested (from 22 Nov 2026 playtest)
+14. **Visible traffic lights.** The traffic already obeys lights; they just aren't drawn. *(Ties to item 24.)*
 18. **Blips while delivering.** While carrying a passenger, hide the blips of other people. They should not show the green highway tip above their heads during a delivery.
 19. **Upgrade menu text on PC.** On hover, the text looks doubled or 3D. The handling and grip text show as two separate areas and get highlighted oddly. Check the whole screen for this, including the button and the speedometer text.
 20. **Traffic around the player.** The minimap shows cars, but not enough are near the player. On a long straight drive there can be no car ahead. Show where more cars are needed.
@@ -41,7 +30,6 @@
 26. **Taxi wheel wells.** Add wheel wells so the wheels don't clip inside the taxi body.
 27. **More detailed AI vehicles.** Some vans look very low detail. Add some depth and a bit of pattern design, without going overboard.
 28. **Taxi light bar.** Add a light bar on top of the taxi, made from small blocks like the blank-text placeholder used on buildings. It does not need to spell "TAXI", for performance.
-29. **Upgrade pricing.** The price curve feels good so far (the player has reached level 3). Keep it.
 30. **Metrics ideas.** Add some in-game metrics, e.g. per 5 minutes:
     - Passengers delivered per 5 minutes
     - Money earned per minute
@@ -50,12 +38,6 @@
     - Total and longest drift score
     - Crashes and damage taken
     - Nearby traffic density (ties to item 20)
-
-## Playtest notes (23 Nov 2026)
-31. **Low-speed full stop.** When the vehicle is moving very slowly (e.g. ~1 km/h) with no throttle, bring it to a complete stop so it does not travel at 1 km/h forever.
-
-## Done
-Crash feedback (1), HUD dial and minimap (2), taxi fares (4), drift score (6), AI traffic (7), app icon (10), plus-sign wheels (11), visible traffic lights (14, 24), slower starting car (15), weaker starting grip (16), upgrades (17, 29), hide fare blips while delivering (18), PC HUD hover text fix (19), forward-biased traffic density (20), sweeping drift physics (21), speed-sensitive steering (22), car damage and repair (23), floating trees fix (25), taxi wheel wells (26), detailed AI vehicles (27), taxi roof light bar (28), in-game metrics overlay (30).
 
 ## Suggested order
 Checkpoint runs (3), then a pause and settings menu (12).
