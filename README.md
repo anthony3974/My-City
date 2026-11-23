@@ -114,7 +114,7 @@ For a development build that reports file and line numbers in stack traces, and 
 
 ## Releasing to F-Droid
 
-1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.4.0, version code 6.
+1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.5.0, version code 7.
 2. Build with `Tools/android-build.sh`.
 3. `cp Builds/Android/MyCity.apk ~/APKs/MyCity.apk`
 4. `~/fdroid/release.sh`
