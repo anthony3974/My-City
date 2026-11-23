@@ -51,6 +51,9 @@
     - Crashes and damage taken
     - Nearby traffic density (ties to item 20)
 
+## Playtest notes (23 Nov 2026)
+31. **Low-speed full stop.** When the vehicle is moving very slowly (e.g. ~1 km/h) with no throttle, bring it to a complete stop so it does not travel at 1 km/h forever.
+
 ## Done
 Crash feedback (1), HUD dial and minimap (2), taxi fares (4), drift score (6), AI traffic (7), app icon (10), plus-sign wheels (11), visible traffic lights (14, 24), slower starting car (15), weaker starting grip (16), upgrades (17, 29), hide fare blips while delivering (18), PC HUD hover text fix (19), forward-biased traffic density (20), sweeping drift physics (21), speed-sensitive steering (22), car damage and repair (23), floating trees fix (25), taxi wheel wells (26), detailed AI vehicles (27), taxi roof light bar (28), in-game metrics overlay (30).
 
