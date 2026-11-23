@@ -530,6 +530,10 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 7569497221f34a9a78c1c188b6bc9de8, type: 2}
   - {fileID: 2100000, guid: d0166d2582f3e42eea707f4fdcd787d5, type: 2}
   - {fileID: 2100000, guid: db1bac3e8de109949b947ebc38ef6fe9, type: 2}
+  - {fileID: 2100000, guid: 6f06234354c254318a3eba217f527436, type: 2}
+  - {fileID: 2100000, guid: 2725d8688924b71759fe448d2c37fb87, type: 2}
+  - {fileID: 2100000, guid: dc81e7e99a125c839826ac8b1d40cc41, type: 2}
+  - {fileID: 2100000, guid: 57ba6cb355e4337b0b6ca279d6bd68ce, type: 2}
   car: {fileID: 0}
   followCamera: {fileID: 330585548}
   placeCarAtStart: 1

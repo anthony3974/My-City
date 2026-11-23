@@ -10,6 +10,7 @@ public enum CityMat
     GlassBlue, GlassTeal, GlassDark, GlassSilver,
     Roof, Metal, Grass, Trunk, Leaves,
     TrafficPole, TrafficYellow, TrafficDark,
+    GrassBlade,   // 3D park grass (ParkGrass), not used by generated meshes
     Count
 }
 

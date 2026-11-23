@@ -76,6 +76,13 @@ public class CityStreamer : MonoBehaviour
         if (followCamera != null && followCamera.target == null) followCamera.target = car;
         carBody = car.GetComponent<Rigidbody>();
 
+        var bladeMat = materials[(int)CityMat.GrassBlade];
+        if (bladeMat != null)
+            gameObject.AddComponent<ParkGrass>().Init(this, bladeMat,
+                followCamera != null ? followCamera.GetComponent<Camera>() : Camera.main);
+        else
+            Debug.LogWarning("City: no GrassBlade material, park grass is off. Run Tools > City > Set Up Scene.");
+
         if (placeCarAtStart)
         {
             // Right-hand lane of a north-south road near the middle of tile (0,0), between intersections.

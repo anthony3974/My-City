@@ -41,7 +41,8 @@ public static class CityTextureBaker
             ("Asphalt", 1024, 1024, 8f, 8f, Asphalt, 0.4f),
             ("Sidewalk", 1024, 1024, 6f, 6f, Sidewalk, 0.6f),
             ("Roof", 1024, 1024, 8f, 8f, Roof, 0.5f),
-            ("Grass", 1024, 1024, 4f, 4f, Grass, 0.3f),
+            ("Grass", 1024, 1024, 4f, 4f, Grass, 0.8f),
+            ("GrassBlade", 64, 64, 1f, 1f, GrassBlade, 0f),
             ("Leaves", 512, 512, 2f, 2f, Leaves, 0.5f),
             ("Trunk", 512, 512, 1f, 1f, Trunk, 0.6f),
             ("Metal", 512, 512, 2f, 2f, Metal, 0.5f),
@@ -83,6 +84,13 @@ public static class CityTextureBaker
         mats[(int)CityMat.TrafficPole] = MakeMaterial("TrafficPole", null, null, new Color(0.14f, 0.16f, 0.19f), 1f, 0.65f);
         mats[(int)CityMat.TrafficYellow] = MakeMaterial("TrafficYellow", null, null, new Color(0.95f, 0.68f, 0.06f), 1f, 0.55f);
         mats[(int)CityMat.TrafficDark] = MakeMaterial("TrafficDark", null, null, new Color(0.05f, 0.05f, 0.06f), 1f, 0.25f);
+
+        // 3D park grass: both sides of each blade drawn, and GPU instancing on (ParkGrass draws it instanced).
+        var blade = MakeMaterial("GrassBlade", albedo["GrassBlade"], null, Color.white, 1f, 0f);
+        blade.SetFloat("_Cull", 0f);
+        blade.doubleSidedGI = true;
+        blade.enableInstancing = true;
+        mats[(int)CityMat.GrassBlade] = blade;
 
         AssetDatabase.SaveAssets();
         return mats;
@@ -567,15 +575,77 @@ public static class CityTextureBaker
         h = 0.004f * gravel;
     }
 
+    /// <summary>
+    /// Lawn seen from above: a dense mat of short blades (2.5 to 4 cm, 2 px wide) pointing every which way,
+    /// dark roots and soil in the gaps, lighter tips on top. The height map makes each blade stand out in the
+    /// normal map. Big soft patches change the shade and thin the grass into worn, drier spots.
+    /// </summary>
     static void Grass(int px, int py, float u, float v, float mx, float my, out Color c, out float s, out float h)
     {
         const int seed = 101;
-        float patch = Fbm(u, v, 6, 6, 4, seed);
-        float blade = Noise(u, v, 512, 96, seed + 1);
-        c = Color.Lerp(new Color(0.2f, 0.36f, 0.12f), new Color(0.36f, 0.52f, 0.2f), 0.6f * patch + 0.4f * blade);
-        if (patch < 0.35f) c = Color.Lerp(c, new Color(0.42f, 0.4f, 0.24f), (0.35f - patch) * 2f);   // worn patches
-        s = 0.08f;
-        h = 0.004f * blade;
+        const int N = 96;          // blade cells across the texture (4.2 cm each)
+        const int PerCell = 4;
+        float patch = Fbm(u, v, 4, 4, 4, seed);
+        float worn = Mathf.Clamp01((0.38f - patch) * 4f);          // 0 = lush, 1 = worn
+        float tone = 0.88f + 0.24f * Fbm(u, v, 12, 12, 3, seed + 7);
+
+        float gx = u * N, gy = v * N;
+        int cx = Mathf.FloorToInt(gx), cy = Mathf.FloorToInt(gy);
+        float best = -1f, bestT = 0f, bestEdge = 0f, bestHue = 0f, bestDry = 0f;
+        for (int oy = -1; oy <= 1; oy++)
+        {
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = cx + ox, iy = cy + oy, wx = Mod(ix, N), wy = Mod(iy, N);
+                for (int k = 0; k < PerCell; k++)
+                {
+                    int sd = seed + 10 + k * 11;
+                    if (H(wx, wy, sd + 6) < worn * 0.6f) continue;   // thinner where worn
+                    float bx = ix + H(wx, wy, sd), by = iy + H(wx, wy, sd + 1);
+                    float ang = H(wx, wy, sd + 2) * Mathf.PI * 2f;
+                    float len = 0.6f + 0.4f * H(wx, wy, sd + 3);
+                    float dx = Mathf.Cos(ang), dy = Mathf.Sin(ang);
+                    float rx = gx - bx, ry = gy - by;
+                    float t = Mathf.Clamp01((rx * dx + ry * dy) / len);
+                    float ex = rx - dx * t * len, ey = ry - dy * t * len;
+                    float hw = (0.1f + 0.05f * H(wx, wy, sd + 4)) * (1f - 0.75f * t);   // tapers to the tip
+                    float d2 = ex * ex + ey * ey;
+                    if (d2 >= hw * hw) continue;
+                    float layer = H(wx, wy, sd + 5) * 0.6f + t * 0.4f;   // tips lie over roots
+                    if (layer <= best) continue;
+                    best = layer; bestT = t; bestEdge = 1f - Mathf.Sqrt(d2) / hw;
+                    bestHue = H(wx, wy, sd + 7); bestDry = H(wx, wy, sd + 8);
+                }
+            }
+        }
+
+        if (best < 0f)
+        {
+            // Gap between blades: shadowed roots, browner where worn.
+            c = Shade(Color.Lerp(new Color(0.15f, 0.25f, 0.08f), new Color(0.32f, 0.27f, 0.16f), worn), tone);
+            s = 0.02f; h = 0f;
+            return;
+        }
+
+        Color green = Color.Lerp(new Color(0.25f, 0.43f, 0.11f), new Color(0.44f, 0.63f, 0.21f), bestHue);
+        Color dry = new Color(0.6f, 0.56f, 0.32f);
+        if (bestDry < 0.06f + 0.5f * worn) green = Color.Lerp(green, dry, 0.6f + 0.4f * bestDry);
+        c = Shade(green, tone * (0.75f + 0.4f * bestT) * (0.85f + 0.15f * bestEdge));
+        s = 0.05f + 0.1f * bestT;
+        h = (0.0015f + 0.004f * bestT) * Mathf.Sqrt(bestEdge);
+    }
+
+    /// <summary>Colours for the 3D grass blades: 16 columns of different greens (a few dry), dark root to light tip.</summary>
+    static void GrassBlade(int px, int py, float u, float v, float mx, float my, out Color c, out float s, out float h)
+    {
+        const int seed = 141;
+        int col = px / 4;
+        float r = H(col, 0, seed), dry = H(col, 1, seed);
+        Color g = Color.Lerp(new Color(0.19f, 0.34f, 0.09f), new Color(0.38f, 0.55f, 0.17f), r);
+        if (dry < 0.12f) g = new Color(0.5f, 0.48f, 0.26f);
+        c = Shade(g, Mathf.Lerp(0.6f, 1.15f, Mathf.SmoothStep(0f, 1f, v)));
+        s = 0.05f + 0.15f * v;
+        h = 0f;
     }
 
     static void Leaves(int px, int py, float u, float v, float mx, float my, out Color c, out float s, out float h)
