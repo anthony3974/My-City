@@ -47,6 +47,12 @@ public static class CityLook
     public const float FloorHeight = 3.5f;
     public const float StorefrontHeight = 4.5f;
 
+    // Traffic light geometry constants shared with Traffic.cs so glowing lenses align with the static housings.
+    public const float TrafficLightInset = 0.7f;
+    public const float TrafficLightHousingY = 4.72f;
+    public const float TrafficLightHousingDepth = 0.34f;
+    public const float TrafficLightLensSpacing = 0.32f;
+
     public static bool IsFacade(CityMat m) => m >= CityMat.Storefront && m <= CityMat.GlassSilver;
 
     public static FacadeSpec Facade(CityMat m) => m == CityMat.Storefront
@@ -269,6 +275,7 @@ public static class CityGenerator
         {
             // Raised sidewalk slab covering the whole block. Its top is at y = 0.2.
             SolidBox(new Vector3(0f, 0.1f, 0f), new Vector3(s.blockSize, 0.2f, s.blockSize), CityMat.Sidewalk, CityMat.Sidewalk);
+            BuildTrafficLights();
 
             float downtown = Downtown(s, gx, gz);
             if (Chance(ParkChance(s, downtown)))   // the block's first random draw; IsPark relies on that
@@ -276,6 +283,54 @@ public static class CityGenerator
             else
                 BuildBuildings(downtown);
         }
+
+        static readonly Vector3[] LightDirs = { Vector3.forward, Vector3.right, Vector3.back, Vector3.left };
+
+        /// <summary>
+        /// Mast-arm traffic light poles at all four block corners, hanging out over the far-right lane of each
+        /// adjacent intersection. Traffic.cs draws the live glowing red/yellow/green lenses on these housings.
+        /// </summary>
+        void BuildTrafficLights()
+        {
+            float h = s.blockSize * 0.5f;
+            float inset = CityLook.TrafficLightInset;
+            float overhang = s.roadWidth * 0.25f;   // distance from curb to lane centre
+            float armReach = inset + overhang + 0.45f;
+            const float poleH = 5.3f;
+            const float armY = 5.36f;
+
+            for (int dir = 0; dir < 4; dir++)
+            {
+                Vector3 fwd = LightDirs[dir];
+                Vector3 right = LightDirs[(dir + 1) & 3];
+                Vector3 poleXZ = (-fwd - right) * (h - inset);
+
+                // Vertical pole + base collar on the sidewalk corner.
+                Box(poleXZ + Vector3.up * (0.2f + poleH * 0.5f), new Vector3(0.22f, poleH, 0.22f),
+                    CityMat.Metal, CityMat.Metal, collider: false);
+                Box(poleXZ + Vector3.up * 0.38f, new Vector3(0.36f, 0.36f, 0.36f),
+                    CityMat.Metal, CityMat.Metal, collider: false);
+
+                // Horizontal mast arm extending over the road lane (along -right).
+                Vector3 armCenter = poleXZ - right * (armReach * 0.5f) + Vector3.up * armY;
+                Vector3 armSize = AbsVec(right * armReach + fwd * 0.16f) + Vector3.up * 0.16f;
+                Box(armCenter, armSize, CityMat.Metal, CityMat.Metal, collider: false, bottom: true);
+
+                // Signal head housing hanging beneath the mast arm, facing -fwd toward approaching traffic.
+                Vector3 headXZ = poleXZ - right * (inset + overhang);
+                Vector3 headSize = AbsVec(right * 0.42f + fwd * CityLook.TrafficLightHousingDepth) + Vector3.up * 1.12f;
+                Box(headXZ + Vector3.up * CityLook.TrafficLightHousingY, headSize,
+                    CityMat.Metal, CityMat.Metal, collider: false, bottom: true);
+
+                // Small top hood/visor over the signal head.
+                Vector3 visorCenter = headXZ - fwd * (CityLook.TrafficLightHousingDepth * 0.5f + 0.11f)
+                    + Vector3.up * (CityLook.TrafficLightHousingY + 0.53f);
+                Vector3 visorSize = AbsVec(right * 0.44f + fwd * 0.22f) + Vector3.up * 0.06f;
+                Box(visorCenter, visorSize, CityMat.Metal, CityMat.Metal, collider: false, bottom: true);
+            }
+        }
+
+        static Vector3 AbsVec(Vector3 v) => new(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
 
         void BuildBuildings(float downtown)
         {
@@ -400,9 +455,11 @@ public static class CityGenerator
             {
                 float px = Range(-inner / 2f + 2f, inner / 2f - 2f), pz = Range(-inner / 2f + 2f, inner / 2f - 2f);
                 if (Mathf.Abs(px) < 3f || Mathf.Abs(pz) < 3f) continue;   // keep the paths clear
-                float trunkH = Range(1.8f, 3.2f), canopy = Range(2.5f, 4.5f);
-                Box(new Vector3(px, 0.3f + trunkH / 2f, pz), new Vector3(0.45f, trunkH, 0.45f), CityMat.Trunk, CityMat.Trunk);
-                Box(new Vector3(px, 0.3f + trunkH + canopy / 2f, pz), new Vector3(canopy, canopy * Range(0.8f, 1.1f), canopy),
+                float trunkH = Range(1.8f, 3.2f), canopy = Range(2.5f, 4.5f), canopyH = canopy * Range(0.8f, 1.1f);
+                // Extend the trunk slightly into the canopy so they never separate.
+                float fullTrunk = trunkH + 0.35f;
+                Box(new Vector3(px, 0.3f + fullTrunk / 2f, pz), new Vector3(0.45f, fullTrunk, 0.45f), CityMat.Trunk, CityMat.Trunk);
+                Box(new Vector3(px, 0.3f + trunkH + canopyH / 2f, pz), new Vector3(canopy, canopyH, canopy),
                     CityMat.Leaves, CityMat.Leaves, collider: false, bottom: true);
             }
         }

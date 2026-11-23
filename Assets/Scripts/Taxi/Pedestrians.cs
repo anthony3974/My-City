@@ -40,6 +40,7 @@ public class Pedestrians : MonoBehaviour
     Material[] clothes, skins, pants;
     Material eyeMat, fareMat;
     readonly List<Material> owned = new();
+    bool showFareLights = true;
 
     static readonly Color[] ClothesColors =
     {
@@ -88,7 +89,11 @@ public class Pedestrians : MonoBehaviour
         {
             var p = new Person { fare = i >= walkers };
             BuildPerson(p);
-            if (p.fare && fareMat != null) p.light = FareLight(beacon);
+            if (p.fare && fareMat != null)
+            {
+                p.light = FareLight(beacon);
+                p.light.gameObject.SetActive(showFareLights);
+            }
             Respawn(p, nearOk: !p.fare);
             people.Add(p);
         }
@@ -110,6 +115,16 @@ public class Pedestrians : MonoBehaviour
     }
 
     // ------------------------------------------------------------------ Taxi game hooks
+
+    /// <summary>Hides or shows the green lights/beacons over waiting fares (hidden while carrying a passenger).</summary>
+    public void SetShowFareLights(bool show)
+    {
+        if (showFareLights == show) return;
+        showFareLights = show;
+        foreach (var p in people)
+            if (p.fare && p.light != null)
+                p.light.gameObject.SetActive(show);
+    }
 
     public bool NearestFare(Vector3 from, out Vector3 pos)
     {

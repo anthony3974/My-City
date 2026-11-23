@@ -25,6 +25,7 @@ public class TouchControls : MonoBehaviour
     bool resetWasDown;
     GUIStyle style;
     Texture2D fill;
+    static readonly GUIContent labelContent = new();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
@@ -79,8 +80,8 @@ public class TouchControls : MonoBehaviour
             p.y = Screen.height - p.y;
             int id = t.touchId;
 
-            // The upgrade menu (or its button) takes this touch.
-            if (UpgradeMenu.Blocks(p)) continue;
+            // Menus and HUD buttons take this touch.
+            if (UpgradeMenu.Blocks(p) || GameMetrics.Blocks(p) || CarDamage.Blocks(p)) continue;
 
             if (id == lookFingerId)
             {
@@ -114,6 +115,7 @@ public class TouchControls : MonoBehaviour
 
     void OnGUI()
     {
+        if (Event.current.type != EventType.Repaint) return;
         if (style == null)
         {
             fill = new Texture2D(1, 1);
@@ -142,6 +144,7 @@ public class TouchControls : MonoBehaviour
         GUI.color = new Color(1f, 1f, 1f, pressed ? 0.45f : 0.2f);
         GUI.DrawTexture(r, fill);
         GUI.color = old;
-        GUI.Label(r, label, style);
+        labelContent.text = label;
+        style.Draw(r, labelContent, false, false, false, false);
     }
 }

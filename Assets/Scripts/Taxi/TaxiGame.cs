@@ -32,7 +32,13 @@ public class TaxiGame : MonoBehaviour
     bool passenger;
     Vector2Int dropBlock;
     int dropSide, money, trips;
-    float paidUntil;
+    float paidUntil, pickupTime;
+
+    /// <summary>Fired when a passenger is dropped off: (farePay, deliverySeconds).</summary>
+    public event System.Action<int, float> Delivered;
+
+    public bool HasPassenger => passenger;
+    public int Trips => trips;
 
     Material glow;
     MaterialPropertyBlock props;
@@ -135,13 +141,16 @@ public class TaxiGame : MonoBehaviour
             if (stopped && people.TryPickUp(car.position, pickupRadius))
             {
                 passenger = true;
+                pickupTime = Time.time;
                 PickDropOff();
+                people.SetShowFareLights(false);
                 if (look != null) look.SetFree(false);
             }
         }
         else if (stopped && FlatDistance(car.position, DropPoint()) < dropRadius)
         {
             passenger = false;
+            people.SetShowFareLights(true);
             if (look != null) look.SetFree(true);
             // The passenger gets out on the sidewalk next to the drop-off and walks away.
             float len = people.SideLength(Pedestrians.WalkInset);
@@ -153,6 +162,7 @@ public class TaxiGame : MonoBehaviour
             PlayerPrefs.SetInt(TripsKey, trips);
             PlayerPrefs.Save();
             paidUntil = Time.unscaledTime + 2.5f;
+            Delivered?.Invoke(farePay, Mathf.Max(0.1f, Time.time - pickupTime));
         }
     }
 

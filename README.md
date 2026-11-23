@@ -30,7 +30,7 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
   - Each block is **one mesh** (one submesh per material) with box colliders, about 70 objects per tile. The old pre-built city was about 2,300 objects.
   - Every building has shops on the ground floor. Low-rise buildings are brick (red or tan), stone, plaster (white or grey, some with shutters) or offices. Towers are glass (4 tints), offices or stone, stacked in setback tiers with a plant room and sometimes an antenna.
   - Building heights snap to whole floors (3.5 m, shops 4.5 m), and each face gets a whole number of 3 m window bays, so windows never get cut off.
-  - Roads have yellow centre dashes and zebra crosswalks. Parks have paths and trees.
+  - Roads have yellow centre dashes, zebra crosswalks, and mast-arm traffic lights at every intersection. Parks have paths and trees.
 - All the settings (seed, block size, heights, park chance, downtown size) are on the City Streamer component.
 
 ### Textures
@@ -43,11 +43,12 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 ### Car
 - `Assets/Scripts/CarController.cs`: an arcade raycast car.
   - Each wheel is a spring, so the car rides up curbs.
-  - Sideways grip per wheel, with less grip on the rear wheels when the handbrake is on, for drifting.
-  - Steering gets tighter at speed.
+  - Sideways grip per wheel, with sweeping handbrake drift physics (moderated rear grip, yaw damping and slip-angle assist so drifts stretch around corners instead of snapping into U-turns).
+  - Speed-sensitive steering: both maximum steering angle and turn-in rate taper down as speed climbs.
   - All tuning values are on the component in the Inspector. They are the starting car's (86 km/h, loose grip); upgrades raise them.
 - `Assets/Scripts/CrashFeedback.cs` (added by the car): sparks where you hit something, camera shake, and a split-second slow motion on hard hits. Scraping along a wall throws a stream of sparks.
-- `Assets/Scripts/PlayerCar.cs`: the taxi is built in code when you press Play (the City Streamer calls it). It's made of boxes and cylinders: a yellow body with a black stripe, a glass cabin, bumpers, lights, a roof sign that's lit while the taxi is free, and wheels that steer and spin. Its materials are tinted copies of one city material, so the build needs no extra shaders. The City Streamer places it on a road and points the camera at it. To drive a different car, drag it into the City Streamer's **Car** field.
+- `Assets/Scripts/CarDamage.cs` (added by the car): tracks car health (0–100) from side crashes and wall scrapes, deforms bumpers/panels, scuffs paint, knocks out headlights/taillights, and emits hood smoke and flames when heavily damaged. Shows a health bar under the minimap; when wrecked, the engine dies and you can repair ($20) or take a free replacement if broke.
+- `Assets/Scripts/PlayerCar.cs`: the taxi is built in code when you press Play (the City Streamer calls it). It's made of boxes and cylinders: a yellow body with recessed wheel wells and a black stripe, a glass cabin, bumpers, lights, a roof light bar with blocky placeholder lettering (lit while the taxi is free), and plus-spoke wheels that steer and spin. Its materials are tinted copies of one city material, so the build needs no extra shaders. The City Streamer places it on a road and points the camera at it. To drive a different car, drag it into the City Streamer's **Car** field.
 
 ### Camera
 `Assets/Scripts/ThirdPersonCamera.cs`, on the Main Camera:
@@ -58,18 +59,19 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 
 ### Taxi game
 `Assets/Scripts/Taxi/` creates itself at startup:
-- `TaxiGame.cs`: people with a green light over their head want a ride. Stop next to one to pick them up, then drive to the yellow beacon 4–8 blocks away and stop there to get paid ($25). An arrow over the taxi points at the nearest fare or the drop-off. Money and trip count are saved in `PlayerPrefs`. Shows the money and what to do next at the top of the screen.
-- `Assets/Scripts/UpgradeMenu.cs` (added by TaxiGame): spend fare money on speed, brakes and handling, five levels each ($50, $100, $150, $250, $400). Fully upgraded the car does 137 km/h with better grip and steering than the start. Levels are saved in `PlayerPrefs` and applied to the CarController. Opened with the UPGRADES button (top-right) and pauses the game while open.
+- `TaxiGame.cs`: people with a green light over their head want a ride. Stop next to one to pick them up, then drive to the yellow beacon 4–8 blocks away and stop there to get paid ($25). Other waiting fares hide their green lights while you are carrying a passenger. An arrow over the taxi points at the nearest fare or the drop-off. Money and trip count are saved in `PlayerPrefs`. Shows the money and what to do next at the top of the screen.
+- `Assets/Scripts/UpgradeMenu.cs` (added by TaxiGame): spend fare money on speed, brakes and handling, five levels each ($50, $100, $150, $250, $400), or repair car damage. Fully upgraded the car does 137 km/h with better grip and steering than the start. Levels are saved in `PlayerPrefs` and applied to the CarController. Opened with the UPGRADES button (top-right) and pauses the game while open.
 - `Pedestrians.cs`: about 40 blocky walkers loop around the blocks near you, turning back or stopping now and then, and 5 fares wait at the curb. People who end up far away are moved to a block near you.
 
 ### Traffic
-`Assets/Scripts/Traffic/Traffic.cs` creates itself at startup. About 28 cars and vans drive in the right-hand lanes and pick a random way at each intersection. They stop for traffic lights (not drawn; each intersection lets north-south and east-west go in turn, with an all-red gap), queue behind the car in front (yours too), and wait for oncoming cars before turning left. Brake lights come on when they slow down. Each one is a physics body held on its lane, so you can shove it. Knock it more than about 2 m off its lane and it tumbles free until it's out of sight, then it's reused. Cars far from you, or stuck for 10 s out of sight, are moved to a road nearer you.
+`Assets/Scripts/Traffic/Traffic.cs` creates itself at startup. About 48 sedans, SUVs and detailed delivery vans drive in the right-hand lanes and pick a random way at each intersection. They stop for the visible red/yellow/green traffic lights (drawn in 3 batched meshes synced to each intersection's cycle), queue behind the car in front (yours too), and wait for oncoming cars before turning left. Brake lights come on when they slow down. Each one is a physics body held on its lane, so you can shove it. Knock it more than about 2 m off its lane and it tumbles free until it's out of sight, then it's reused. Respawning is biased ahead of the player and cars far behind are recycled quickly so straight avenues stay populated.
 
 ### HUD
 `Assets/Scripts/Hud/` creates itself at startup and draws with OnGUI:
 - `Speedometer.cs`: a round dial with a ring of lights that fill with speed (red past 120 km/h), a needle, the speed in digits and an R when reversing. Bottom-centre on phones, bottom-right otherwise.
 - `Minimap.cs`: a round map in the top-left, turned so the camera's view is up. It's drawn into a 160 px texture every frame from the road grid, with no second camera: roads, sidewalks, buildings (lighter downtown) and parks (`CityGenerator.IsPark`). It shows traffic, fares, the drop-off (pinned to the rim when it's off the map) and north.
-- `HudDraw.cs`: the soft circles, bars, needle and arrow, made in code.
+- `GameMetrics.cs`: a toggleable live stats panel (`M`/`F3` or the `STATS` button under `UPGRADES`) tracking 5-minute fares/5m, money/min, average delivery time, distance driven, top speed, total and longest drift score (plus a live `DRIFT +...` banner while drifting), crashes/damage taken, and nearby/ahead traffic density.
+- `HudDraw.cs`: the soft circles, bars, needle, arrow and hover-safe text helper, made in code.
 
 ### Touch controls
 `Assets/Scripts/TouchControls.cs` creates itself on touchscreen devices, so nothing needs to be in the scene. It draws its buttons with OnGUI.
@@ -81,11 +83,12 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 | Gas / brake / reverse | W / S, ↑ ↓ | RT / LT | GAS / BRAKE |
 | Steer | A / D, ← → | Left stick | LEFT / RIGHT |
 | Handbrake (drift) | Space | A | DRIFT |
-| Flip upright | R | Y | RESET |
+| Flip upright / repair when wrecked | R | Y (or A when wrecked) | RESET (or REPAIR button) |
 | Orbit camera | Hold right mouse + drag | Right stick | Drag on an empty part of the screen |
 | Zoom | Scroll | Bumpers | none |
 | Upgrades menu | U (Esc closes), or click UPGRADES | Start (B closes) | UPGRADES (back closes) |
 | In the menu: pick / buy | ↑ ↓ / Enter or Space, or click a price | D-pad / A | Tap a price |
+| Metrics overlay | M or F3, or click STATS | none | STATS |
 
 ### Scene
 `Assets/Scenes/SampleScene.unity` holds the City Streamer, the camera, the light and the post-processing volume. The city and the taxi only exist in Play mode. It's the only scene in the build.
@@ -130,5 +133,5 @@ The APK is signed with Unity's debug key on this machine. Future updates need to
 ## Ideas for later
 
 - Night mode with lit windows (a glow map on the facades)
-- Streetlights, and visible traffic lights (the traffic already obeys invisible ones)
+- Streetlights
 - Simpler versions of far blocks (LOD) if mid-range phones struggle

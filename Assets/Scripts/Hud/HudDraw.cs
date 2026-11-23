@@ -8,6 +8,7 @@ public static class HudDraw
 {
     static Texture2D disc, ring, bar, needle, arrow, rounded;
     static GUIStyle label, box;
+    static readonly GUIContent content = new();
     const int BoxRadius = 14;
 
     public static Texture2D Disc => disc ? disc : disc = Make(128, 128, (x, y) => DiscAlpha(x, y, 64f, 0f));
@@ -84,17 +85,26 @@ public static class HudDraw
         GUI.matrix = m;
     }
 
-    /// <summary>Text centred on a point, with a soft drop shadow.</summary>
+    /// <summary>Text centred on a point, with a soft drop shadow. Uses Style.Draw without hover/focus states.</summary>
     public static void Text(Vector2 center, string text, int size, Color c)
     {
+        var r = new Rect(center.x - Screen.width, center.y - size, Screen.width * 2f, size * 2f);
+        TextInRect(r, text, size, c, TextAnchor.MiddleCenter);
+    }
+
+    /// <summary>Aligned text inside a rect, with a soft drop shadow and no IMGUI hover highlight.</summary>
+    public static void TextInRect(Rect r, string text, int size, Color c, TextAnchor align = TextAnchor.MiddleCenter)
+    {
+        if (Event.current == null || Event.current.type != EventType.Repaint) return;
         var s = Label;
         s.fontSize = size;
-        var r = new Rect(center.x - Screen.width, center.y - size, Screen.width * 2f, size * 2f);
+        s.alignment = align;
+        content.text = text;
         float o = Mathf.Max(1f, size / 14f);
         s.normal.textColor = new Color(0f, 0f, 0f, 0.6f * c.a);
-        GUI.Label(new Rect(r.x + o, r.y + o, r.width, r.height), text, s);
+        s.Draw(new Rect(r.x + o, r.y + o, r.width, r.height), content, false, false, false, false);
         s.normal.textColor = c;
-        GUI.Label(r, text, s);
+        s.Draw(r, content, false, false, false, false);
     }
 
     // ------------------------------------------------------------------ Texture making

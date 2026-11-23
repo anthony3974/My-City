@@ -29,6 +29,7 @@ public class CrashFeedback : MonoBehaviour
     public float slowMoDuration = 0.12f;    // real seconds
 
     Rigidbody rb;
+    CarDamage damage;
     ThirdPersonCamera cam;
     ParticleSystem sparks;
     float scrapeCarry;
@@ -37,12 +38,14 @@ public class CrashFeedback : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        damage = GetComponent<CarDamage>();
         sparks = CreateSparks();
     }
 
     void Start()
     {
         if (Camera.main) cam = Camera.main.GetComponent<ThirdPersonCamera>();
+        if (damage == null) damage = GetComponent<CarDamage>();
     }
 
     void OnDisable()
@@ -70,6 +73,7 @@ public class CrashFeedback : MonoBehaviour
 
         EmitSparks(point, normal, Mathf.Max(4, Mathf.RoundToInt(maxSparksPerHit * strength)), 2f + 8f * strength);
         if (cam) cam.Shake(maxShake * Mathf.Lerp(0.2f, 1f, strength));
+        if (damage) damage.TakeImpact(impact, strength, point);
 
         if (strength >= slowMoThreshold && slowMo == null)
             slowMo = StartCoroutine(SlowMo());
@@ -90,6 +94,7 @@ public class CrashFeedback : MonoBehaviour
         if (count > 0) EmitSparks(point, normal, count, 3f, -slide * 0.4f);
 
         if (cam) cam.Shake(scrapeShake * Mathf.Clamp01(speed / fullImpact));
+        if (damage) damage.TakeScrape(speed, Time.fixedDeltaTime, point);
     }
 
     /// <summary>Gets the contact point and a normal facing the car. False for hits from below or above.</summary>

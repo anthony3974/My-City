@@ -24,6 +24,9 @@ public class UpgradeMenu : MonoBehaviour
     public static bool Open { get; private set; }
     static Rect openButton;
 
+    /// <summary>Where the UPGRADES button is (GUI coordinates); GameMetrics places its STATS button under it.</summary>
+    public static Rect OpenButtonRect => openButton;
+
     /// <summary>True if TouchControls should ignore a touch at p (GUI coordinates, y down).</summary>
     public static bool Blocks(Vector2 p) => Open || openButton.Contains(p);
 
@@ -34,11 +37,12 @@ public class UpgradeMenu : MonoBehaviour
     {
         maxSpeed = 38f, motor = 12000f,   // 137 km/h
         brake = 30000f,
-        frontGrip = 0.92f, rearGrip = 0.88f, steer = 36f, highSteer = 11f, steerRate = 160f,
+        frontGrip = 0.92f, rearGrip = 0.88f, steer = 34f, highSteer = 6.5f, steerRate = 130f,
     };
 
     TaxiGame taxi;
     CarController car;
+    CarDamage damage;
     Tune start;
     readonly int[] level = new int[3];
 
@@ -47,13 +51,14 @@ public class UpgradeMenu : MonoBehaviour
     float flashUntil;
 
     float u;
-    Rect panel, done;
+    Rect panel, done, repair;
     readonly Rect[] rows = new Rect[3], buys = new Rect[3];
 
     public void Init(TaxiGame taxi, CarController car)
     {
         this.taxi = taxi;
         this.car = car;
+        damage = car.GetComponent<CarDamage>();
         start = new Tune
         {
             maxSpeed = car.maxSpeed, motor = car.motorForce, brake = car.brakeForce,
@@ -160,6 +165,11 @@ public class UpgradeMenu : MonoBehaviour
                 SetOpen(false);
                 return;
             }
+            if (damage != null && damage.CurrentRepairCost > 0 && repair.Contains(p))
+            {
+                damage.TryRepair(allowFreeIfBroke: damage.Wrecked);
+                return;
+            }
             for (int i = 0; i < rows.Length; i++)
             {
                 if (buys[i].Contains(p)) Buy(i);
@@ -238,7 +248,17 @@ public class UpgradeMenu : MonoBehaviour
             rows[i] = new Rect(panel.x + u * 0.4f, panel.y + u * 2.2f + i * u * 1.6f, pw - u * 0.8f, u * 1.4f);
             buys[i] = new Rect(rows[i].xMax - u * 3f, rows[i].center.y - u * 0.55f, u * 2.8f, u * 1.1f);
         }
-        done = new Rect(panel.center.x - u * 1.75f, panel.y + u * 7.05f, u * 3.5f, u * 1f);
+        bool showRepair = damage != null && damage.CurrentRepairCost > 0;
+        if (showRepair)
+        {
+            repair = new Rect(panel.center.x - u * 4.1f, panel.y + u * 7.05f, u * 4.2f, u * 1f);
+            done = new Rect(panel.center.x + u * 0.4f, panel.y + u * 7.05f, u * 3.5f, u * 1f);
+        }
+        else
+        {
+            repair = default;
+            done = new Rect(panel.center.x - u * 1.75f, panel.y + u * 7.05f, u * 3.5f, u * 1f);
+        }
     }
 
     void OnGUI()
@@ -290,6 +310,16 @@ public class UpgradeMenu : MonoBehaviour
             HudDraw.Box(buys[i], fill);
             Color textColor = max ? new Color(1f, 1f, 1f, 0.45f) : afford ? Color.white : new Color(1f, 0.55f, 0.5f);
             HudDraw.Text(buys[i].center, max ? "MAX" : $"${Prices[lvl]}", Mathf.RoundToInt(u * 0.42f), textColor);
+        }
+
+        if (damage != null && damage.CurrentRepairCost > 0)
+        {
+            int rCost = damage.Wrecked ? damage.fullRepairCost : damage.CurrentRepairCost;
+            bool canRepair = taxi.Money >= rCost || damage.Wrecked;
+            Color rFill = canRepair ? new Color(0.22f, 0.56f, 0.85f, 0.95f) : new Color(1f, 1f, 1f, 0.12f);
+            HudDraw.Box(repair, rFill);
+            string rLabel = taxi.Money >= rCost ? $"REPAIR  ${rCost}" : (damage.Wrecked ? "FREE TOW" : $"REPAIR  ${rCost}");
+            HudDraw.Text(repair.center, rLabel, Mathf.RoundToInt(u * 0.36f), canRepair ? Color.white : new Color(1f, 0.55f, 0.5f));
         }
 
         HudDraw.Box(done, new Color(1f, 1f, 1f, 0.18f));
