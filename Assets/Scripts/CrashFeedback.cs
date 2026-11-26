@@ -54,7 +54,7 @@ public class CrashFeedback : MonoBehaviour
         {
             StopCoroutine(slowMo);
             slowMo = null;
-            if (!UpgradeMenu.Open) Time.timeScale = 1f;
+            GameMenu.ApplyTimeScale();
         }
     }
 
@@ -133,7 +133,7 @@ public class CrashFeedback : MonoBehaviour
     {
         Time.timeScale = slowMoScale;
         yield return new WaitForSecondsRealtime(slowMoDuration);
-        if (!UpgradeMenu.Open) Time.timeScale = 1f;   // the menu pauses the game; leave that alone
+        GameMenu.ApplyTimeScale();   // back to normal speed, or stays stopped if a menu opened
         slowMo = null;
     }
 

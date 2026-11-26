@@ -104,6 +104,15 @@ public class TaxiGame : MonoBehaviour
 
     public int Money => money;
 
+    /// <summary>Money and trip count back to zero (Reset progress in settings).</summary>
+    public void ResetProgress()
+    {
+        money = trips = 0;
+        PlayerPrefs.DeleteKey(MoneyKey);
+        PlayerPrefs.DeleteKey(TripsKey);
+        PlayerPrefs.Save();
+    }
+
     /// <summary>Takes cost from the money if there is enough (for the upgrade menu).</summary>
     public bool Spend(int cost)
     {
@@ -286,7 +295,7 @@ public class TaxiGame : MonoBehaviour
 
     void OnGUI()
     {
-        if (people == null || car == null || Event.current.type != EventType.Repaint) return;
+        if (people == null || car == null || GameMenu.HideHud || Event.current.type != EventType.Repaint) return;
 
         string status;
         bool fast = Speed >= stopSpeed;

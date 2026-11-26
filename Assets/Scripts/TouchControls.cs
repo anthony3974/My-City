@@ -19,6 +19,8 @@ public class TouchControls : MonoBehaviour
     public static bool Active { get; private set; }
     /// <summary>Where the RESET button is (GUI coordinates); the upgrade menu's button goes under it.</summary>
     public static Rect ResetRect { get; private set; }
+    /// <summary>Button size multiplier (the Touch buttons setting).</summary>
+    public static float SizeScale = 1f;
 
     Rect left, right, gas, brake, handbrakeRect, reset;
     int lookFingerId = -1;
@@ -53,7 +55,7 @@ public class TouchControls : MonoBehaviour
     void Layout()
     {
         // Sizes scale with the shorter screen side so buttons stay thumb-sized on any phone.
-        float u = Mathf.Min(Screen.width, Screen.height) * 0.2f;
+        float u = Mathf.Min(Screen.width, Screen.height) * 0.2f * SizeScale;
         float m = u * 0.25f;
         var safe = Screen.safeArea;
         float bottom = Screen.height - safe.yMin - m - u;   // GUI coordinates: y down, safe area: y up
@@ -73,6 +75,15 @@ public class TouchControls : MonoBehaviour
         bool hb = false, resetDown = false, lookFingerSeen = false;
         Vector2 look = Vector2.zero;
 
+        if (GameMenu.BlocksInput)
+        {
+            Throttle = Steer = 0f;
+            Handbrake = ResetPressed = resetWasDown = false;
+            LookDelta = Vector2.zero;
+            lookFingerId = -1;
+            return;
+        }
+
         foreach (var t in Touch.activeTouches)
         {
             // Touch positions are y-up; GUI rects are y-down.
@@ -81,7 +92,7 @@ public class TouchControls : MonoBehaviour
             int id = t.touchId;
 
             // Menus and HUD buttons take this touch.
-            if (UpgradeMenu.Blocks(p) || GameMetrics.Blocks(p) || CarDamage.Blocks(p)) continue;
+            if (UpgradeMenu.Blocks(p) || GameMetrics.Blocks(p) || CarDamage.Blocks(p) || GameMenu.Blocks(p)) continue;
 
             if (id == lookFingerId)
             {
@@ -115,7 +126,7 @@ public class TouchControls : MonoBehaviour
 
     void OnGUI()
     {
-        if (Event.current.type != EventType.Repaint) return;
+        if (GameMenu.HideHud || Event.current.type != EventType.Repaint) return;
         if (style == null)
         {
             fill = new Texture2D(1, 1);

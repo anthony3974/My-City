@@ -75,7 +75,15 @@ public class ThirdPersonCamera : MonoBehaviour
         if (target == null) return;
         float dt = Time.deltaTime;
 
-        ReadInput(dt);
+        if (!GameMenu.InGame)
+        {
+            // Title screen: slowly circle the taxi as a backdrop.
+            yaw += 7f * Time.unscaledDeltaTime;
+            pitch = Mathf.Lerp(pitch, 22f, 1f - Mathf.Exp(-1.5f * Time.unscaledDeltaTime));
+            lastInputTime = Time.time;
+        }
+        else if (!GameMenu.BlocksInput)
+            ReadInput(dt);
 
         // Swing back behind the car when the player isn't steering the camera.
         Vector3 velocity = targetBody ? targetBody.linearVelocity : Vector3.zero;

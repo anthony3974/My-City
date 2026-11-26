@@ -22,6 +22,14 @@ public class GameMetrics : MonoBehaviour
     const float WindowSeconds = 300f;   // 5-minute rolling window
 
     static Rect toggleButton;
+    static GameMetrics instance;
+
+    /// <summary>The stats panel is showing (the pause menu toggles it).</summary>
+    public static bool PanelShown
+    {
+        get => instance != null && instance.showPanel;
+        set { if (instance != null) instance.showPanel = value; }
+    }
 
     /// <summary>True if TouchControls should ignore a touch at p (GUI coordinates, y down).</summary>
     public static bool Blocks(Vector2 p) => toggleButton.width > 0f && toggleButton.Contains(p);
@@ -74,6 +82,7 @@ public class GameMetrics : MonoBehaviour
         var m = new GameObject("Game Metrics").AddComponent<GameMetrics>();
         m.city = streamer;
         m.car = streamer.car;
+        instance = m;
     }
 
     void Start()
@@ -90,6 +99,7 @@ public class GameMetrics : MonoBehaviour
     void OnDestroy()
     {
         toggleButton = default;
+        if (instance == this) instance = null;
         if (city != null) city.OriginShifted -= OnOriginShifted;
         if (damage != null) damage.Damaged -= OnDamaged;
         if (taxi != null) taxi.Delivered -= OnDelivered;
@@ -142,7 +152,9 @@ public class GameMetrics : MonoBehaviour
         LayoutButton();
         ReadToggleInput();
 
-        if (UpgradeMenu.Open) return;
+        // Session clock starts when PLAY is pressed, not while the title screen is up.
+        if (!GameMenu.InGame) sessionStart = Time.time;
+        if (GameMenu.BlocksInput) return;
 
         float dt = Time.deltaTime;
         float now = Time.time;
@@ -254,14 +266,13 @@ public class GameMetrics : MonoBehaviour
 
     void ReadToggleInput()
     {
+        if (GameMenu.BlocksInput) return;
         var kb = Keyboard.current;
         if (kb != null && (kb.mKey.wasPressedThisFrame || kb.f3Key.wasPressedThisFrame))
         {
             showPanel = !showPanel;
             return;
         }
-
-        if (UpgradeMenu.Open) return;
 
         if (TouchControls.Active)
         {
@@ -282,7 +293,7 @@ public class GameMetrics : MonoBehaviour
 
     void OnGUI()
     {
-        if (car == null || Event.current.type != EventType.Repaint) return;
+        if (car == null || GameMenu.HideHud || Event.current.type != EventType.Repaint) return;
 
         // Live drift score popup (bottom-centre above touch/speedo area).
         if (!UpgradeMenu.Open)

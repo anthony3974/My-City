@@ -177,7 +177,7 @@ public class CarDamage : MonoBehaviour
 
     void UpdateWreckedInput()
     {
-        if (!Wrecked || UpgradeMenu.Open)
+        if (!Wrecked || GameMenu.BlocksInput)
         {
             repairButton = default;
             return;
@@ -214,7 +214,7 @@ public class CarDamage : MonoBehaviour
 
     void OnGUI()
     {
-        if (Event.current.type != EventType.Repaint) return;
+        if (GameMenu.HideHud || Event.current.type != EventType.Repaint) return;
 
         var safe = Screen.safeArea;
         float shortSide = Mathf.Min(Screen.width, Screen.height);
@@ -248,7 +248,7 @@ public class CarDamage : MonoBehaviour
         }
 
         // Wrecked modal prompt with clickable/tappable repair or free replacement button.
-        if (Wrecked && !UpgradeMenu.Open && repairButton.width > 0f)
+        if (Wrecked && !GameMenu.BlocksInput && repairButton.width > 0f)
         {
             float pw = repairButton.width * 1.18f, ph = repairButton.height * 2.5f;
             var box = new Rect(Screen.width / 2f - pw / 2f, repairButton.y - repairButton.height * 1.15f, pw, ph);

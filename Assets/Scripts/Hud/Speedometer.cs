@@ -49,7 +49,7 @@ public class Speedometer : MonoBehaviour
 
     void OnGUI()
     {
-        if (car == null || Event.current.type != EventType.Repaint) return;
+        if (car == null || GameMenu.HideHud || Event.current.type != EventType.Repaint) return;
 
         var safe = Screen.safeArea;   // y up; GUI is y down
         float shortSide = Mathf.Min(Screen.width, Screen.height);

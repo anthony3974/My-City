@@ -73,6 +73,9 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 - `GameMetrics.cs`: a toggleable live stats panel (`M`/`F3` or the `STATS` button under `UPGRADES`) tracking 5-minute fares/5m, money/min, average delivery time, distance driven, top speed, total and longest drift score (plus a live `DRIFT +...` banner while drifting), crashes/damage taken, and nearby/ahead traffic density.
 - `HudDraw.cs`: the soft circles, bars, needle, arrow and hover-safe text helper, made in code.
 
+### Menus
+`Assets/Scripts/GameMenu.cs` creates itself at startup. The game opens on a title screen (PLAY/CONTINUE, SETTINGS, QUIT) while the city and traffic run behind it and the camera circles the taxi; the car takes no input until PLAY. The pause menu stops time and offers resume, upgrades, stats, flip car, settings, main menu and quit (PC only). Settings (saved in `PlayerPrefs`): render quality (scales the URP render scale, restored when Play mode ends), frame rate cap, invert camera Y, touch button size, and reset progress. Other scripts check `GameMenu.BlocksInput`, `GameMenu.HideHud` and `GameMenu.Frozen`; `GameMenu.ApplyTimeScale()` is the one place that sets `Time.timeScale` back.
+
 ### Touch controls
 `Assets/Scripts/TouchControls.cs` creates itself on touchscreen devices, so nothing needs to be in the scene. It draws its buttons with OnGUI.
 
@@ -86,8 +89,9 @@ The city isn't saved in the scene. It's generated in the game, in square tiles o
 | Flip upright / repair when wrecked | R | Y (or A when wrecked) | RESET (or REPAIR button) |
 | Orbit camera | Hold right mouse + drag | Right stick | Drag on an empty part of the screen |
 | Zoom | Scroll | Bumpers | none |
-| Upgrades menu | U (Esc closes), or click UPGRADES | Start (B closes) | UPGRADES (back closes) |
-| In the menu: pick / buy | ↑ ↓ / Enter or Space, or click a price | D-pad / A | Tap a price |
+| Pause menu | Esc or P, or click the pause button | Start (B closes) | Pause button or back |
+| Upgrades menu | U (Esc closes), click UPGRADES, or from the pause menu | Select/View (B closes) | UPGRADES (back closes) |
+| In a menu: pick / choose | ↑ ↓ / Enter or Space, or click | D-pad / A | Tap |
 | Metrics overlay | M or F3, or click STATS | none | STATS |
 
 ### Scene
@@ -114,7 +118,7 @@ For a development build that reports file and line numbers in stack traces, and 
 
 ## Releasing to F-Droid
 
-1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.5.0, version code 7.
+1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.6.0, version code 8.
 2. Build with `Tools/android-build.sh`.
 3. `cp Builds/Android/MyCity.apk ~/APKs/MyCity.apk`
 4. `~/fdroid/release.sh`

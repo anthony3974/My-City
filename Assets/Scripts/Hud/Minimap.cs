@@ -164,7 +164,7 @@ public class Minimap : MonoBehaviour
 
     void OnGUI()
     {
-        if (car == null || map == null || Event.current.type != EventType.Repaint) return;
+        if (car == null || map == null || GameMenu.HideHud || Event.current.type != EventType.Repaint) return;
 
         var safe = Screen.safeArea;
         float shortSide = Mathf.Min(Screen.width, Screen.height);

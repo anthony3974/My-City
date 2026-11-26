@@ -41,6 +41,8 @@ public class CarController : MonoBehaviour
     public float brakeForce = 16000f;
     public float rollingResistance = 0.12f;
     public float downforce = 3f;
+    [Tooltip("Below this speed (m/s) with no throttle, the car brakes itself to a full stop.")]
+    public float creepStopSpeed = 2f;
 
     [Header("Steering")]
     // Starting car: speed-sensitive steering and loose grip, so better handling is earned.
@@ -113,7 +115,7 @@ public class CarController : MonoBehaviour
 
     void ReadInput()
     {
-        if (UpgradeMenu.Open)
+        if (GameMenu.BlocksInput)
         {
             throttleInput = steerInput = 0f;
             handbrake = false;
@@ -269,7 +271,10 @@ public class CarController : MonoBehaviour
             }
             else
             {
-                force = -fwdVel * rollingResistance * massPerWheel;
+                // Coasting: rolling resistance alone only ever halves the speed, so the car would creep at
+                // 1 km/h forever. Below creepStopSpeed the drag ramps up so it rolls to a real stop.
+                float creep = Mathf.Clamp01(1f - Mathf.Abs(fwdVel) / creepStopSpeed);
+                force = -fwdVel * Mathf.Lerp(rollingResistance, 2.5f, creep * creep) * massPerWheel;
             }
 
             if (!wrecked && handbrake && !straightHandbrake && !w.front)
@@ -278,6 +283,14 @@ public class CarController : MonoBehaviour
             rb.AddForceAtPosition(fwd * force, forcePoint);
 
             w.spin += (handbrake && !w.front ? fwdVel * 0.2f : fwdVel) / wheelRadius * Mathf.Rad2Deg * dt;
+        }
+
+        // Fully parked: no throttle, almost still and on the ground, so stop for good instead of drifting by mm.
+        if (groundedCount >= 3 && Mathf.Abs(throttleInput) < 0.05f && flatSpeed < 0.25f
+            && Mathf.Abs(Vector3.Dot(rb.angularVelocity, up)) < 0.1f)
+        {
+            Vector3 v = rb.linearVelocity;
+            rb.linearVelocity = new Vector3(0f, v.y, 0f);
         }
 
         IsDrifting = groundedCount >= 2 && flatSpeed > 6.5f && DriftAngle > 12f && speed > 3f;

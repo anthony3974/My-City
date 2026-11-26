@@ -8,7 +8,7 @@ using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 /// Levels are saved in PlayerPrefs and applied to the CarController's tuning, starting from the values the car
 /// was built with. The game pauses while the menu is open.
 ///
-/// Open: the UPGRADES button (top-right), U, or Start on a gamepad.
+/// Open: the UPGRADES button (top-right), U, Select/View on a gamepad, or UPGRADES in the pause menu.
 /// In the menu: tap or click a price to buy; Up/Down (W/S, d-pad) pick a row, Enter/Space (A) buys;
 /// Esc, U, Android back, B or Start close it, as does tapping outside the panel.
 /// Added by TaxiGame.
@@ -23,6 +23,10 @@ public class UpgradeMenu : MonoBehaviour
     /// <summary>True while the menu is open (the game is paused).</summary>
     public static bool Open { get; private set; }
     static Rect openButton;
+    static UpgradeMenu instance;
+
+    /// <summary>Opens the menu (from the pause menu).</summary>
+    public static void Show() { if (instance != null) instance.SetOpen(true); }
 
     /// <summary>Where the UPGRADES button is (GUI coordinates); GameMetrics places its STATS button under it.</summary>
     public static Rect OpenButtonRect => openButton;
@@ -56,6 +60,7 @@ public class UpgradeMenu : MonoBehaviour
 
     public void Init(TaxiGame taxi, CarController car)
     {
+        instance = this;
         this.taxi = taxi;
         this.car = car;
         damage = car.GetComponent<CarDamage>();
@@ -72,8 +77,8 @@ public class UpgradeMenu : MonoBehaviour
 
     void OnDestroy()
     {
-        if (Open) Time.timeScale = 1f;
         Open = false;
+        if (instance == this) instance = null;
         openButton = default;
     }
 
@@ -130,7 +135,19 @@ public class UpgradeMenu : MonoBehaviour
     void SetOpen(bool open)
     {
         Open = open;
-        Time.timeScale = open ? 0f : 1f;
+        GameMenu.ApplyTimeScale();   // stays paused if it was opened from the pause menu
+    }
+
+    /// <summary>Back to level 0 on every stat (Reset progress in settings).</summary>
+    public void ResetLevels()
+    {
+        for (int i = 0; i < level.Length; i++)
+        {
+            level[i] = 0;
+            PlayerPrefs.DeleteKey(Key(i));
+        }
+        PlayerPrefs.Save();
+        Apply();
     }
 
     // ------------------------------------------------------------------ Input
@@ -142,11 +159,12 @@ public class UpgradeMenu : MonoBehaviour
 
         var kb = Keyboard.current;
         var pad = Gamepad.current;
-        bool toggle = (kb != null && kb.uKey.wasPressedThisFrame) || (pad != null && pad.startButton.wasPressedThisFrame);
+        bool toggle = (kb != null && kb.uKey.wasPressedThisFrame) || (pad != null && pad.selectButton.wasPressedThisFrame);
         bool tapped = Tap(out Vector2 p);
 
         if (!Open)
         {
+            if (GameMenu.BlocksInput) return;   // title screen or pause menu (which has its own UPGRADES item)
             if (toggle || (tapped && openButton.Contains(p))) SetOpen(true);
             return;
         }
@@ -195,7 +213,7 @@ public class UpgradeMenu : MonoBehaviour
     }
 
     /// <summary>A new touch or left click this frame, in GUI coordinates (y down).</summary>
-    static bool Tap(out Vector2 p)
+    public static bool Tap(out Vector2 p)
     {
         if (TouchControls.Active)
         {
@@ -268,6 +286,7 @@ public class UpgradeMenu : MonoBehaviour
 
         if (!Open)
         {
+            if (GameMenu.HideHud) return;
             HudDraw.Box(openButton, new Color(1f, 1f, 1f, 0.2f));
             string label = TouchControls.Active ? "UPGRADES" : "UPGRADES (U)";
             HudDraw.Text(openButton.center, label, Mathf.RoundToInt(openButton.height * 0.38f),
