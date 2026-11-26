@@ -40,7 +40,8 @@ public class CityStreamer : MonoBehaviour
         public GameObject root;
         public int nextBlock = -1;   // -1 = not started
         public readonly List<Mesh> meshes = new();
-        public bool Built => root != null && nextBlock >= task.Result.blocks.Count;
+        public bool done;            // all blocks built; the data has gone back to the pool
+        public bool Built => done;
         public float buildMs;
         public int buildFrames;
         public bool failed;
@@ -50,6 +51,10 @@ public class CityStreamer : MonoBehaviour
     public event System.Action<Vector3> OriginShifted;
 
     readonly Dictionary<Vector2Int, Tile> tiles = new();
+    // Unloaded tiles are taken apart a few blocks per frame: destroying ~70 objects with colliders at once
+    // cost about 12 ms on a phone, three tiles at a time.
+    readonly Queue<(GameObject root, List<Mesh> meshes)> dying = new();
+    const int DestroysPerFrame = 12;
     readonly List<Vector2Int> scratch = new();
     readonly Stopwatch watch = new();
     Vector2Int originCell, center;
@@ -93,6 +98,8 @@ public class CityStreamer : MonoBehaviour
             if (carBody) { carBody.position = pos; carBody.rotation = Quaternion.identity; }
         }
 
+        if (LogStats) gameObject.AddComponent<HitchLogger>();
+
         center = CellAt(car.position);
         BuildHorizon();
 
@@ -110,6 +117,7 @@ public class CityStreamer : MonoBehaviour
         ShiftOriginIfFar();
         Recenter();
         BuildSome();
+        DestroySome();
 
         Vector3 p = car.position;
         float snap = CityLook.MetersPerRepeat(CityMat.Asphalt);
@@ -144,6 +152,12 @@ public class CityStreamer : MonoBehaviour
     {
         foreach (var t in tiles.Values) Unload(t);
         tiles.Clear();
+        while (dying.Count > 0)
+        {
+            var (root, meshes) = dying.Dequeue();
+            if (root != null) Destroy(root);
+            foreach (var m in meshes) Destroy(m);
+        }
         foreach (var m in runtimeMaterials) Destroy(m);
         runtimeMaterials.Clear();
         Destroy(horizonMesh);
@@ -167,8 +181,12 @@ public class CityStreamer : MonoBehaviour
         UpdateWanted();
     }
 
+    static readonly Unity.Profiling.ProfilerMarker WantedMarker = new("CityStreamer.Wanted"),
+        UnloadMarker = new("CityStreamer.Unload"), BuildMarker = new("CityStreamer.Build");
+
     void UpdateWanted()
     {
+        using var _ = WantedMarker.Auto();
         scratch.Clear();
         foreach (var t in tiles.Values)
             if (Mathf.Max(Mathf.Abs(t.cell.x - center.x), Mathf.Abs(t.cell.y - center.y)) > radius)
@@ -197,15 +215,46 @@ public class CityStreamer : MonoBehaviour
 
     void Unload(Tile t)
     {
-        if (t.root != null) Destroy(t.root);
-        foreach (var m in t.meshes) Destroy(m);
+        using var _ = UnloadMarker.Auto();
+        if (t.root != null || t.meshes.Count > 0)
+            dying.Enqueue((t.root, new List<Mesh>(t.meshes)));
+        t.root = null;
         t.meshes.Clear();
+        // Data that was generated but never fully built can be reused too.
+        if (!t.done && !t.failed && t.task.IsCompletedSuccessfully) CityGenerator.Recycle(t.task.Result);
+        t.done = true;
+    }
+
+    void DestroySome()
+    {
+        int budget = DestroysPerFrame;
+        while (budget > 0 && dying.Count > 0)
+        {
+            var (root, meshes) = dying.Peek();
+            if (root != null)
+            {
+                var tr = root.transform;
+                while (budget > 0 && tr.childCount > 0)
+                {
+                    var child = tr.GetChild(tr.childCount - 1);
+                    child.SetParent(null, false);   // so childCount drops now; Destroy happens at frame end
+                    Destroy(child.gameObject);
+                    budget--;
+                }
+                if (tr.childCount > 0) return;
+                Destroy(root);
+            }
+            foreach (var m in meshes) Destroy(m);
+            dying.Dequeue();
+            budget--;
+        }
     }
 
     // ------------------------------------------------------------------ Building GameObjects
 
     void BuildSome()
     {
+        using var _ = BuildMarker.Auto();
         watch.Restart();
         while (watch.Elapsed.TotalMilliseconds < buildBudgetMs)
         {
@@ -214,7 +263,7 @@ public class CityStreamer : MonoBehaviour
             int best = int.MaxValue;
             foreach (var t in tiles.Values)
             {
-                if (t.failed || !t.task.IsCompleted || (t.root != null && t.Built)) continue;
+                if (t.failed || t.done || !t.task.IsCompleted) continue;
                 if (t.task.IsFaulted)
                 {
                     Debug.LogException(t.task.Exception);
@@ -267,10 +316,11 @@ public class CityStreamer : MonoBehaviour
 
         t.buildMs += (float)sw.Elapsed.TotalMilliseconds;
         t.buildFrames++;
-        if (t.Built)
+        if (t.nextBlock >= data.blocks.Count)
         {
-            // The tile was built with the same data; drop it so the garbage collector can have it.
-            data.blocks.Clear();
+            // Every mesh has been copied out of the data, so it can be refilled by the next tile.
+            t.done = true;
+            CityGenerator.Recycle(data);
             if (LogStats)
                 Debug.Log($"CITY tile {t.cell} built in {t.buildMs:0.0} ms over {t.buildFrames} frames");
         }
@@ -288,10 +338,10 @@ public class CityStreamer : MonoBehaviour
         var used = new List<Material>();
         int sub = 0;
         for (int m = 0; m < md.tris.Length; m++)
-            if (md.tris[m] != null) used.Add(materials[m]);
+            if (md.tris[m] != null && md.tris[m].Count > 0) used.Add(materials[m]);
         mesh.subMeshCount = used.Count;
         for (int m = 0; m < md.tris.Length; m++)
-            if (md.tris[m] != null) mesh.SetTriangles(md.tris[m], sub++, false);
+            if (md.tris[m] != null && md.tris[m].Count > 0) mesh.SetTriangles(md.tris[m], sub++, false);
         mesh.RecalculateBounds();
         mesh.UploadMeshData(true);   // frees the CPU copy; colliders are boxes, so nothing needs to read it
         t.meshes.Add(mesh);
@@ -340,6 +390,8 @@ public class CityStreamer : MonoBehaviour
 
         foreach (var t in tiles.Values)
             if (t.root != null) t.root.transform.position += delta;
+        foreach (var (root, _) in dying)
+            if (root != null) root.transform.position += delta;
 
         car.position += delta;
         if (carBody) carBody.position += delta;

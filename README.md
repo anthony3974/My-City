@@ -108,7 +108,7 @@ Tools/android-build.sh --install  # also installs and starts it on a phone plugg
 
 With Unity open, use **Tools → Android → Build APK**. **Tools → Android → Apply Android Settings** sets the package id, IL2CPP, ARM64, orientation and the rest. That code is in `Assets/Editor/AndroidBuild.cs`.
 
-For a development build that reports file and line numbers in stack traces, and logs `CITY ...` lines (frame rate every 5 s, how long each tile took to build, origin shifts) that you can read with `adb logcat -s Unity:V | grep CITY`:
+For a development build that reports file and line numbers in stack traces, and logs `CITY ...` lines (frame rate every 5 s, how long each tile took to build, origin shifts) that you can read with `adb logcat -s Unity:V | grep CITY`. It also logs a `HITCH` line for any frame over 40 ms, with the engine steps that took the time (garbage collection, HUD drawing, physics, destroys, tile building), from `Assets/Scripts/City/HitchLogger.cs`:
 
 ```bash
 ~/Unity/Hub/Editor/6000.0.85f1/Editor/Unity -batchmode -buildTarget Android -projectPath "$PWD" \
@@ -118,7 +118,7 @@ For a development build that reports file and line numbers in stack traces, and 
 
 ## Releasing to F-Droid
 
-1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.6.0, version code 8.
+1. Bump the version in `ProjectSettings/ProjectSettings.asset` (or Player Settings). Raise `AndroidBundleVersionCode` by 1 and change `bundleVersion`. Phones only update when the version code goes up. The current release is 0.6.1, version code 9.
 2. Build with `Tools/android-build.sh`.
 3. `cp Builds/Android/MyCity.apk ~/APKs/MyCity.apk`
 4. `~/fdroid/release.sh`
@@ -131,6 +131,7 @@ The APK is signed with Unity's debug key on this machine. Future updates need to
 - **Fog must be on in the scene, not only from code.** URP strips fog shader variants when no scene in the build has fog turned on, so fog switched on only at runtime does nothing on the phone.
 - **Big flat meshes are split into a grid** (ground in 16 m squares, horizon in 100 m squares). URP works out fog per vertex, so one huge quad would fog the area near the camera wrongly.
 - **Materials made only in code need a shader that's in the build.** URP strips shaders no scene material uses. So the glow (beacons, arrow, fare lights, brake lights) and the sparks use materials in `Assets/Resources/`, which always go into the build. Everything else is a tinted copy of a city material.
+- **Tile generation must not make garbage.** Each tile's mesh lists are several MB; when they were thrown away after every tile, the garbage collector stalled the phone for 70-220 ms at each tile crossing. `CityGenerator` now pools `TileData` (`Recycle` after the tile is built) and CityStreamer takes unloaded tiles apart 12 objects per frame.
 - **Meshes made at runtime must be destroyed by hand.** Destroying a GameObject doesn't free its Mesh. CityStreamer keeps a list for each tile and destroys them when it unloads the tile.
 - **Performance (Galaxy S23 Ultra, old pre-built city):** about 9 copies of the old 2,300-object map ran at 120 fps, 16 at 60 fps and 49 at 30 fps. The processor ran out before the GPU. The new city is about 70 objects per tile.
 

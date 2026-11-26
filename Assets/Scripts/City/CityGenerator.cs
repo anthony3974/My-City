@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -84,6 +85,13 @@ public class MeshData
     public readonly List<Vector2> uvs = new();
     public readonly List<int>[] tris = new List<int>[(int)CityMat.Count];
 
+    /// <summary>Empties the lists but keeps their capacity, so a pooled tile refills them without allocating.</summary>
+    public void Clear()
+    {
+        verts.Clear(); normals.Clear(); tangents.Clear(); uvs.Clear();
+        foreach (var t in tris) t?.Clear();
+    }
+
     /// <summary>Corners in order bottom-left, top-left, top-right, bottom-right as seen from the front.</summary>
     public void Quad(CityMat m, Vector3 bl, Vector3 tl, Vector3 tr, Vector3 br, Vector3 n, Vector4 tangent,
         Vector2 uvMin, Vector2 uvMax)
@@ -125,10 +133,25 @@ public static class CityGenerator
     static readonly Vector3[] SideNormals = { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
     static readonly CityMat[] Glasses = { CityMat.GlassBlue, CityMat.GlassTeal, CityMat.GlassDark, CityMat.GlassSilver };
 
+    // Tiles whose meshes are built hand their data back here, and new tiles refill it. Generating a tile
+    // used to allocate several MB of lists that became garbage right away, and the garbage collector then
+    // stalled the game for 20-40 ms each time the car crossed into a new tile.
+    static readonly ConcurrentBag<TileData> pool = new();
+    const int MaxPooled = 6;
+
+    /// <summary>Gives a tile's data back for reuse once nothing reads it any more.</summary>
+    public static void Recycle(TileData tile)
+    {
+        if (tile != null && pool.Count < MaxPooled) pool.Add(tile);
+    }
+
     public static TileData GenerateTile(CitySettings s, Vector2Int cell)
     {
-        var tile = new TileData { cell = cell };
+        if (!pool.TryTake(out var tile)) tile = new TileData();
+        tile.cell = cell;
+        tile.ground.Clear();
         BuildGround(s, tile.ground);
+        int used = 0;
 
         float pitch = s.Pitch;
         for (int i = 0; i < s.blocksPerTile; i++)
@@ -137,15 +160,21 @@ public static class CityGenerator
             {
                 int gx = cell.x * s.blocksPerTile + i;
                 int gz = cell.y * s.blocksPerTile + j;
-                var block = new BlockData
+                BlockData block;
+                if (used < tile.blocks.Count)
                 {
-                    localPos = new Vector3(i * pitch + s.roadWidth + s.blockSize / 2f, 0f,
-                                           j * pitch + s.roadWidth + s.blockSize / 2f),
-                };
+                    block = tile.blocks[used];
+                    block.mesh.Clear();
+                    block.colliders.Clear();
+                }
+                else tile.blocks.Add(block = new BlockData());
+                used++;
+                block.localPos = new Vector3(i * pitch + s.roadWidth + s.blockSize / 2f, 0f,
+                                             j * pitch + s.roadWidth + s.blockSize / 2f);
                 new BlockBuilder(s, block, gx, gz).Build();
-                tile.blocks.Add(block);
             }
         }
+        if (tile.blocks.Count > used) tile.blocks.RemoveRange(used, tile.blocks.Count - used);
         return tile;
     }
 
